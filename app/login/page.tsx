@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { auth, microsoftSignInEnabled } from "@/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "./login-form";
 
@@ -19,11 +19,13 @@ export default async function LoginPage({
         <CardHeader>
           <CardTitle className="text-xl">CAC Session Booking</CardTitle>
           <CardDescription>
-            Log in with your ISB email and PGP ID, or sign in with Microsoft.
+            {microsoftSignInEnabled
+              ? "Log in with your ISB email and PGP ID, or sign in with Microsoft."
+              : "Log in with your ISB email and PGP ID."}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <LoginForm urlError={error} />
+          <LoginForm urlError={error} microsoftSignInEnabled={microsoftSignInEnabled} />
         </CardContent>
       </Card>
     </div>

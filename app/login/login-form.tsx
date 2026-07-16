@@ -6,7 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { loginWithRoster, loginWithMicrosoft, type LoginFormState } from "./actions";
 
-export function LoginForm({ urlError }: { urlError?: string }) {
+export function LoginForm({
+  urlError,
+  microsoftSignInEnabled,
+}: {
+  urlError?: string;
+  microsoftSignInEnabled: boolean;
+}) {
   const [state, formAction, pending] = useActionState<LoginFormState, FormData>(
     loginWithRoster,
     undefined
@@ -52,17 +58,21 @@ export function LoginForm({ urlError }: { urlError?: string }) {
         </Button>
       </form>
 
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        <div className="h-px flex-1 bg-border" />
-        or
-        <div className="h-px flex-1 bg-border" />
-      </div>
+      {microsoftSignInEnabled && (
+        <>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="h-px flex-1 bg-border" />
+            or
+            <div className="h-px flex-1 bg-border" />
+          </div>
 
-      <form action={loginWithMicrosoft}>
-        <Button type="submit" variant="outline" className="w-full">
-          Sign in with Microsoft
-        </Button>
-      </form>
+          <form action={loginWithMicrosoft}>
+            <Button type="submit" variant="outline" className="w-full">
+              Sign in with Microsoft
+            </Button>
+          </form>
+        </>
+      )}
     </div>
   );
 }

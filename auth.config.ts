@@ -9,7 +9,25 @@ export const authConfig: NextAuthConfig = {
   pages: {
     signIn: "/login",
   },
+  session: { strategy: "jwt" },
   callbacks: {
+    // jwt/session live here (not just in auth.ts) so the edge middleware built from this config
+    // also sees `isAdmin` on the session — otherwise the /admin gate below never passes for
+    // admins and bounces them into a /admin ⇄ /login redirect loop.
+    jwt({ token, user }) {
+      if (user) {
+        token.userId = user.id;
+        token.isAdmin = Boolean((user as { isAdmin?: boolean }).isAdmin);
+      }
+      return token;
+    },
+    session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.userId as string;
+        session.user.isAdmin = Boolean(token.isAdmin);
+      }
+      return session;
+    },
     authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;
       const { pathname } = request.nextUrl;
