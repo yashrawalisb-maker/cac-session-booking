@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum EventStatus {
+  draft
+  published
+  closed
+}
+
+enum SessionStatus {
+  open
+  closed
+  cancelled
+}
+
+enum BookingType {
+  self_selected
+  auto_allotted
+}
+
+enum BookingStatus {
+  confirmed
+  cancelled_by_admin
+}
+
+enum AckStatus {
+  sent
+  failed
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  isbEmail  String   @unique @map("isb_email")
+  pgpId     String   @unique @map("pgp_id")
+  isAdmin   Boolean  @default(false) @map("is_admin")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  createdEvents     Event[]                @relation("EventCreatedBy")
+  ticketAllotments  EventTicketAllotment[]
+  bookings          Booking[]
+  loginAttempts     LoginAttempt[]
+
+  @@map("users")
+}
+
+model Event {
+  id                  String      @id @default(cuid())
+  name                String
+  description         String?
+  startDate           DateTime    @map("start_date")
+  endDate             DateTime    @map("end_date")
+  bookingDeadline     DateTime    @map("booking_deadline")
+  status              EventStatus @default(draft)
+  overlapCheckEnabled Boolean     @default(true) @map("overlap_check_enabled")
+  createdById         String      @map("created_by")
+  createdBy           User        @relation("EventCreatedBy", fields: [createdById], references: [id])
+  createdAt           DateTime    @default(now()) @map("created_at")
+
+  sessions         Session[]
+  ticketAllotments EventTicketAllotment[]
+  bookings         Booking[]
+
+  @@map("events")
+}
+
+model EventTicketAllotment {
+  id              String   @id @default(cuid())
+  eventId         String   @map("event_id")
+  userId          String   @map("user_id")
+  ticketsAllotted Int      @map("tickets_allotted")
+  ticketsUsed     Int      @default(0) @map("tickets_used")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@map("event_ticket_allotments")
+}
+
+model Session {
+  id                  String        @id @default(cuid())
+  eventId             String        @map("event_id")
+  title               String
+  description         String?
+  dayLabel            String        @map("day_label")
+  startsAt            DateTime      @map("starts_at")
+  endsAt              DateTime      @map("ends_at")
+  venueName            String        @map("venue_name")
+  venueLocation        String?       @map("venue_location")
+  capacity             Int
+  bookedCount          Int           @default(0) @map("booked_count")
+  speakerProfileId     String?       @map("speaker_profile_id")
+  speakerDescription   String?       @map("speaker_description")
+  status               SessionStatus @default(open)
+  createdAt            DateTime      @default(now()) @map("created_at")
+
+  event    Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([eventId])
+  @@map("sessions")
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  userId        String        @map("user_id")
+  eventId       String        @map("event_id")
+  sessionId     String        @map("session_id")
+  bookingType   BookingType   @map("booking_type")
+  status        BookingStatus @default(confirmed)
+  bookedAt      DateTime      @default(now()) @map("booked_at")
+  adminNote     String?       @map("admin_note")
+  overriddenBy  String?       @map("overridden_by")
+  overriddenAt  DateTime?     @map("overridden_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  acknowledgmentLogs AcknowledgmentLog[]
+
+  @@unique([userId, sessionId])
+  @@index([eventId])
+  @@index([sessionId])
+  @@map("bookings")
+}
+
+model AcknowledgmentLog {
+  id        String    @id @default(cuid())
+  bookingId String    @map("booking_id")
+  channel   String    @default("email")
+  status    AckStatus
+  detail    String?
+  sentAt    DateTime  @default(now()) @map("sent_at")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("acknowledgment_logs")
+}
+
+model LoginAttempt {
+  id          String   @id @default(cuid())
+  identifier  String   // isbEmail lowercased, used as the rate-limit key
+  userId      String?  @map("user_id")
+  success     Boolean
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([identifier, createdAt])
+  @@map("login_attempts")
+}
