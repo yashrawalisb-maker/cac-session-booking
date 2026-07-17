@@ -35,12 +35,14 @@ enum AckStatus {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  isbEmail  String   @unique @map("isb_email")
-  pgpId     String   @unique @map("pgp_id")
-  isAdmin   Boolean  @default(false) @map("is_admin")
-  createdAt DateTime @default(now()) @map("created_at")
+  id         String   @id @default(cuid())
+  name       String
+  isbEmail   String   @unique @map("isb_email")
+  pgpId      String   @unique @map("pgp_id")
+  isAdmin    Boolean  @default(false) @map("is_admin")
+  section    String? // cohort section, e.g. "G" — reference only, not used in booking logic
+  studyGroup String?  @map("study_group") // e.g. "G12" — reference only
+  createdAt  DateTime @default(now()) @map("created_at")
 
   createdEvents     Event[]                @relation("EventCreatedBy")
   ticketAllotments  EventTicketAllotment[]

@@ -143,20 +143,22 @@ export async function setDefaultTickets(
     select: { userId: true },
   });
   const existingIds = new Set(existing.map((a) => a.userId));
+  const newUserIds = users.filter((u) => !existingIds.has(u.id)).map((u) => u.id);
 
-  await prisma.$transaction([
-    ...users
-      .filter((u) => !existingIds.has(u.id))
-      .map((u) =>
-        prisma.eventTicketAllotment.create({
-          data: { eventId, userId: u.id, ticketsAllotted: tickets },
-        })
-      ),
-    prisma.eventTicketAllotment.updateMany({
+  // Two bulk statements instead of one create-per-user inside a single interactive
+  // transaction — with a large roster, N individual creates blew past Prisma's default 5s
+  // transaction timeout. This is idempotent (safe to re-run) so no transaction is needed.
+  if (newUserIds.length > 0) {
+    await prisma.eventTicketAllotment.createMany({
+      data: newUserIds.map((userId) => ({ eventId, userId, ticketsAllotted: tickets })),
+    });
+  }
+  if (existingIds.size > 0) {
+    await prisma.eventTicketAllotment.updateMany({
       where: { eventId, userId: { in: Array.from(existingIds) } },
       data: { ticketsAllotted: tickets },
-    }),
-  ]);
+    });
+  }
 
   revalidateEvent(eventId);
   return { success: true, message: `Set ${tickets} ticket(s) for ${users.length} user(s).` };

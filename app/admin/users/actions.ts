@@ -46,17 +46,30 @@ export async function importUsersCsv(_prevState: ActionState, formData: FormData
       const name = record.name?.trim();
       const isbEmail = record.isb_email?.trim();
       const pgpId = record.pgp_id?.trim();
+      const section = record.section?.trim() || undefined;
+      const studyGroup = record.study_group?.trim() || undefined;
       if (!name) throw new Error(`Row ${row}: missing name`);
       if (!isbEmail) throw new Error(`Row ${row}: missing isb_email`);
       if (!pgpId) throw new Error(`Row ${row}: missing pgp_id`);
-      return { name, isbEmail, pgpId };
+      return { name, isbEmail, pgpId, section, studyGroup };
     }
   );
   if (headerError) return { error: headerError };
 
   const errors = results.filter((r) => r.error).map((r) => r.error!);
   const valid = results.filter(
-    (r): r is { row: number; data: { name: string; isbEmail: string; pgpId: string } } => !!r.data
+    (
+      r
+    ): r is {
+      row: number;
+      data: {
+        name: string;
+        isbEmail: string;
+        pgpId: string;
+        section: string | undefined;
+        studyGroup: string | undefined;
+      };
+    } => !!r.data
   );
 
   // Catch in-file duplicates before hitting the DB.
@@ -96,7 +109,13 @@ export async function importUsersCsv(_prevState: ActionState, formData: FormData
       continue;
     }
     await prisma.user.create({
-      data: { name: v.data.name, isbEmail: v.data.isbEmail, pgpId: v.data.pgpId },
+      data: {
+        name: v.data.name,
+        isbEmail: v.data.isbEmail,
+        pgpId: v.data.pgpId,
+        section: v.data.section,
+        studyGroup: v.data.studyGroup,
+      },
     });
     existingEmails.add(v.data.isbEmail.toLowerCase());
     existingPgpIds.add(v.data.pgpId.toLowerCase());
