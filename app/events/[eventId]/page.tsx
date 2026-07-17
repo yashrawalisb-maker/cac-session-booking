@@ -1,15 +1,17 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft, CalendarClock, Ticket } from "lucide-react";
 import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { isPast } from "@/lib/time";
-import { SiteHeader } from "@/components/site-header";
+import { AppShell } from "@/components/app-shell";
 import { SessionCard, type SessionCardStatus } from "@/components/session-card";
-import { Badge } from "@/components/ui/badge";
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
-  hour: "2-digit",
+  hour: "numeric",
   minute: "2-digit",
+  hour12: true,
 });
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -22,8 +24,9 @@ const DEADLINE_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   day: "2-digit",
   month: "short",
   year: "numeric",
-  hour: "2-digit",
+  hour: "numeric",
   minute: "2-digit",
+  hour12: true,
 });
 
 export default async function EventDetailPage({
@@ -57,29 +60,42 @@ export default async function EventDetailPage({
   const dayLabels = Array.from(new Set(sessions.map((s) => s.dayLabel)));
 
   return (
-    <div className="flex flex-1 flex-col">
-      <SiteHeader userName={user.name ?? user.email ?? ""} isAdmin={!!user.isAdmin} />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6">
-        <div className="mb-6">
-          <h1 className="font-serif text-3xl font-semibold tracking-tight">{event.name}</h1>
+    <AppShell variant="student" userName={user.name ?? user.email ?? ""} userSubtitle={user.email ?? undefined}>
+      <div className="flex flex-col gap-6">
+        <div>
+          <Link
+            href="/dashboard"
+            className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" />
+            Back to dashboard
+          </Link>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{event.name}</h1>
           {event.description && (
             <p className="mt-1 text-sm text-muted-foreground">{event.description}</p>
           )}
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-            <Badge variant={deadlinePassed ? "secondary" : "outline"}>
-              {deadlinePassed ? "Booking deadline passed" : "Deadline"}:{" "}
-              {DEADLINE_FORMATTER.format(event.bookingDeadline)} IST
-            </Badge>
-            <Badge variant="outline">
-              {ticketsRemaining} of {allotment.ticketsAllotted} tickets remaining
-            </Badge>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <div className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+              <CalendarClock className="size-4 text-primary/70" />
+              <span className={deadlinePassed ? "text-danger" : "text-foreground"}>
+                {deadlinePassed ? "Booking closed" : "Deadline"}: {DEADLINE_FORMATTER.format(event.bookingDeadline)} IST
+              </span>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+              <Ticket className="size-4 text-primary/70" />
+              <span>
+                <span className="font-semibold text-foreground">{ticketsRemaining}</span> of{" "}
+                {allotment.ticketsAllotted} tickets remaining
+              </span>
+            </div>
           </div>
         </div>
 
         {dayLabels.map((day) => (
-          <section key={day} className="mb-8">
-            <h2 className="mb-3 text-lg font-medium">{day}</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+          <section key={day}>
+            <h2 className="mb-3 text-lg font-semibold tracking-tight">{day}</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {sessions
                 .filter((s) => s.dayLabel === day)
                 .map((s) => {
@@ -101,7 +117,7 @@ export default async function EventDetailPage({
                       sessionId={s.id}
                       title={s.title}
                       description={s.description}
-                      timeLabel={`${DATE_FORMATTER.format(s.startsAt)}, ${TIME_FORMATTER.format(s.startsAt)}–${TIME_FORMATTER.format(s.endsAt)} IST`}
+                      timeLabel={`${DATE_FORMATTER.format(s.startsAt)}, ${TIME_FORMATTER.format(s.startsAt)} – ${TIME_FORMATTER.format(s.endsAt)}`}
                       venueName={s.venueName}
                       venueLocation={s.venueLocation}
                       speaker={s.speakerDescription}
@@ -114,7 +130,7 @@ export default async function EventDetailPage({
             </div>
           </section>
         ))}
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

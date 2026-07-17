@@ -35,7 +35,11 @@ export const authConfig: NextAuthConfig = {
       if (pathname.startsWith("/admin")) {
         return isLoggedIn && !!auth?.user?.isAdmin;
       }
-      if (pathname.startsWith("/dashboard") || pathname.startsWith("/events")) {
+      if (
+        pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/events") ||
+        pathname.startsWith("/my-bookings")
+      ) {
         return isLoggedIn;
       }
       return true;

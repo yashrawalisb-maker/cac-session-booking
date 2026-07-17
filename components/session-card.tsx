@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
+import { Clock, MapPin, User, Users, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { bookSessionAction, type BookActionState } from "@/app/events/[eventId]/actions";
 
 export type SessionCardStatus =
@@ -46,44 +47,70 @@ export function SessionCard({
   );
 
   const effectiveStatus: SessionCardStatus = state?.success ? "booked" : status;
+  const isBooked = effectiveStatus === "booked" || effectiveStatus === "booked_auto";
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={cn("flex flex-col", isBooked && "ring-2 ring-success/40")}>
+      <CardContent className="flex flex-1 flex-col gap-3">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base">{title}</CardTitle>
+          <h3 className="text-base font-semibold tracking-tight">{title}</h3>
           <StatusBadge status={effectiveStatus} seatsRemaining={seatsRemaining} />
         </div>
-        <CardDescription>{timeLabel}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2 text-sm">
-        {description && <p className="text-muted-foreground">{description}</p>}
-        <p>
-          <span className="font-medium">Venue:</span> {venueName}
-          {venueLocation ? `, ${venueLocation}` : ""}
-        </p>
-        {speaker && (
-          <p>
-            <span className="font-medium">Speaker:</span> {speaker}
-          </p>
-        )}
-        <p className="text-muted-foreground">
-          {seatsRemaining} of {capacity} seats remaining
-        </p>
+
+        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+
+        <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
+          <span className="flex items-center gap-2">
+            <Clock className="size-4 shrink-0 text-primary/70" />
+            {timeLabel}
+          </span>
+          <span className="flex items-center gap-2">
+            <MapPin className="size-4 shrink-0 text-primary/70" />
+            {venueName}
+            {venueLocation ? `, ${venueLocation}` : ""}
+          </span>
+          {speaker && (
+            <span className="flex items-center gap-2">
+              <User className="size-4 shrink-0 text-primary/70" />
+              {speaker}
+            </span>
+          )}
+          <span className="flex items-center gap-2">
+            <Users className="size-4 shrink-0 text-primary/70" />
+            <span className={cn(seatsRemaining <= 3 && seatsRemaining > 0 && "font-medium text-warning")}>
+              {seatsRemaining} of {capacity} seats remaining
+            </span>
+          </span>
+        </div>
 
         {state?.error && (
-          <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-danger">
+          <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">
             {state.error}
           </p>
         )}
 
-        {effectiveStatus === "bookable" ? (
-          <form action={formAction}>
-            <Button type="submit" disabled={pending} className="mt-1 w-full sm:w-auto">
-              {pending ? "Booking…" : "Book"}
+        <div className="mt-auto pt-1">
+          {effectiveStatus === "bookable" ? (
+            <form action={formAction}>
+              <Button type="submit" disabled={pending} className="w-full">
+                {pending ? "Booking…" : "Book this slot"}
+              </Button>
+            </form>
+          ) : isBooked ? (
+            <div className="flex items-center justify-center gap-2 rounded-lg bg-success-bg py-2 text-sm font-medium text-success">
+              <CheckCircle2 className="size-4" />
+              {effectiveStatus === "booked_auto" ? "Auto-assigned" : "Booked"}
+            </div>
+          ) : (
+            <Button variant="outline" disabled className="w-full">
+              {effectiveStatus === "full"
+                ? "Full"
+                : effectiveStatus === "no_tickets"
+                  ? "No tickets remaining"
+                  : "Booking closed"}
             </Button>
-          </form>
-        ) : null}
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -96,42 +123,20 @@ function StatusBadge({
   status: SessionCardStatus;
   seatsRemaining: number;
 }) {
+  const base = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium";
   switch (status) {
     case "booked":
-      return (
-        <Badge className="bg-success-bg text-success" variant="secondary">
-          Booked ✓
-        </Badge>
-      );
     case "booked_auto":
-      return (
-        <Badge className="bg-success-bg text-success" variant="secondary">
-          Booked ✓ (Auto-assigned)
-        </Badge>
-      );
+      return <span className={cn(base, "bg-success-bg text-success")}>Booked ✓</span>;
     case "full":
-      return (
-        <Badge className="bg-disabled-bg text-disabled-fg" variant="secondary">
-          Full
-        </Badge>
-      );
+      return <span className={cn(base, "bg-danger-bg text-danger")}>Full</span>;
     case "no_tickets":
-      return (
-        <Badge className="bg-disabled-bg text-disabled-fg" variant="secondary">
-          No tickets remaining
-        </Badge>
-      );
+      return <span className={cn(base, "bg-disabled-bg text-disabled-fg")}>No tickets</span>;
     case "deadline_passed":
-      return (
-        <Badge className="bg-disabled-bg text-disabled-fg" variant="secondary">
-          Booking closed
-        </Badge>
-      );
+      return <span className={cn(base, "bg-disabled-bg text-disabled-fg")}>Closed</span>;
     default:
       return seatsRemaining <= 3 ? (
-        <Badge className="bg-warning-bg text-warning" variant="secondary">
-          {seatsRemaining} left
-        </Badge>
+        <span className={cn(base, "bg-warning-bg text-warning")}>{seatsRemaining} left</span>
       ) : null;
   }
 }
