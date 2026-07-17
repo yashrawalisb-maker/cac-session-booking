@@ -61,7 +61,7 @@ export default async function EventDetailPage({
       <SiteHeader userName={user.name ?? user.email ?? ""} isAdmin={!!user.isAdmin} />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">{event.name}</h1>
+          <h1 className="font-serif text-3xl font-semibold tracking-tight">{event.name}</h1>
           {event.description && (
             <p className="mt-1 text-sm text-muted-foreground">{event.description}</p>
           )}

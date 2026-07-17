@@ -42,7 +42,7 @@ export default async function AdminEventDetailPage({
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="mb-3 text-2xl font-semibold tracking-tight">{event.name}</h1>
+        <h1 className="mb-3 font-serif text-2xl font-semibold tracking-tight">{event.name}</h1>
         <EventDetailsForm
           eventId={event.id}
           defaults={{

@@ -11,7 +11,7 @@ export default async function AdminUsersPage() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Roster</h1>
+          <h1 className="font-serif text-2xl font-semibold tracking-tight">Roster</h1>
           <p className="text-sm text-muted-foreground">{users.length} user(s)</p>
         </div>
         <NewUserDialog />

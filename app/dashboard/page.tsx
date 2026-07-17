@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     <div className="flex flex-1 flex-col">
       <SiteHeader userName={user.name ?? user.email ?? ""} isAdmin={!!user.isAdmin} />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6">
-        <h1 className="mb-1 text-2xl font-semibold tracking-tight">My Events</h1>
+        <h1 className="mb-1 font-serif text-3xl font-semibold tracking-tight">My Events</h1>
         <p className="mb-6 text-sm text-muted-foreground">
           Events you&apos;re entitled to book sessions for.
         </p>

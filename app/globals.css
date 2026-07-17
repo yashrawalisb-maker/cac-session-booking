@@ -4,6 +4,14 @@
 :root {
   --radius: 0.625rem;
 
+  /* ISB brand — from the ISB wordmark and the "One Club Conclave" event identity.
+     Constant across light/dark; use these (not --primary) wherever the mark itself,
+     a hero surface, or an explicit brand accent is needed. */
+  --brand-navy: #192890;
+  --brand-navy-deep: #10175c;
+  --brand-mint: #7ee8c9;
+  --brand-mint-deep: #2f9d80;
+
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
@@ -11,7 +19,7 @@
   --popover: #ffffff;
   --popover-foreground: #0f172a;
 
-  --primary: #1e3a8a;
+  --primary: var(--brand-navy);
   --primary-foreground: #ffffff;
   --secondary: #eef2f7;
   --secondary-foreground: #0f172a;
@@ -22,7 +30,7 @@
 
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #1e3a8a;
+  --ring: var(--brand-navy);
 
   --destructive: #b91c1c;
 
@@ -41,6 +49,11 @@
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
+
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-navy-deep: var(--brand-navy-deep);
+  --color-brand-mint: var(--brand-mint);
+  --color-brand-mint-deep: var(--brand-mint-deep);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -74,6 +87,7 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-display);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -85,7 +99,7 @@
     --popover: #111a2c;
     --popover-foreground: #e2e8f0;
 
-    --primary: #3b82f6;
+    --primary: var(--brand-mint);
     --primary-foreground: #0b1220;
     --secondary: #17213a;
     --secondary-foreground: #e2e8f0;
@@ -96,7 +110,7 @@
 
     --border: #1f2b45;
     --input: #1f2b45;
-    --ring: #3b82f6;
+    --ring: var(--brand-mint);
 
     --destructive: #f87171;
 

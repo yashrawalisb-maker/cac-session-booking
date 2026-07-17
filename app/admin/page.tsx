@@ -27,7 +27,7 @@ export default async function AdminDashboardPage() {
     <div>
       <div className="mb-6 flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Events</h1>
+          <h1 className="font-serif text-2xl font-semibold tracking-tight">Events</h1>
           <p className="text-sm text-muted-foreground">
             Manage CAC events, sessions, rosters, and bookings.
           </p>
