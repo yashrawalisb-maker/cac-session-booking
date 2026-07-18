@@ -1,7 +1,7 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth, microsoftSignInEnabled } from "@/auth";
 import { IsbLogo } from "@/components/isb-logo";
-import { SkylineIllustration } from "@/components/skyline-illustration";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage({
@@ -16,25 +16,32 @@ export default async function LoginPage({
 
   return (
     <div className="flex min-h-screen flex-1 flex-col md:flex-row">
-      {/* Brand hero */}
+      {/* Brand hero — solid navy matches the campus illustration's background (#192790 ≈ brand navy) */}
       <div
-        className="relative flex flex-col justify-between gap-10 overflow-hidden px-6 py-10 text-white sm:px-10 md:w-1/2 md:py-14"
-        style={{
-          background: "linear-gradient(160deg, var(--brand-navy) 0%, var(--brand-navy-deep) 100%)",
-        }}
+        className="relative flex flex-col justify-between overflow-hidden text-white md:w-1/2"
+        style={{ background: "var(--brand-navy)" }}
       >
-        <IsbLogo variant="white" height={30} />
-        <div>
-          <p className="text-sm font-medium text-brand-mint">Welcome to</p>
-          <h1 className="mt-2 text-4xl font-semibold leading-[1.1] sm:text-5xl">
-            One Club Conclave 2026
-          </h1>
-          <p className="mt-4 max-w-sm text-sm text-white/70">
-            The Career Advancement Council&apos;s flagship recruiting conclave — book your
-            workshops, panels, and recruiter sessions in one place.
-          </p>
+        <div className="flex flex-col gap-10 px-6 py-10 sm:px-10 md:py-14">
+          <IsbLogo variant="white" height={30} />
+          <div>
+            <p className="text-sm font-medium text-brand-mint">Welcome to</p>
+            <h1 className="mt-2 text-4xl font-semibold leading-[1.1] sm:text-5xl">
+              One Club Conclave 2026
+            </h1>
+            <p className="mt-4 max-w-sm text-sm text-white/70">
+              The Career Advancement Council&apos;s flagship recruiting conclave — book your
+              workshops, panels, and recruiter sessions in one place.
+            </p>
+          </div>
         </div>
-        <SkylineIllustration className="h-28 w-full text-white sm:h-36 md:h-44" />
+        <Image
+          src="/campus.png"
+          alt="Illustration of the ISB campus"
+          width={655}
+          height={323}
+          priority
+          className="pointer-events-none w-full select-none"
+        />
       </div>
 
       {/* Form panel */}
