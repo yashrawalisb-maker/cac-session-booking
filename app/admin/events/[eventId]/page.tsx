@@ -5,6 +5,7 @@ import { SessionsPanel } from "@/components/admin/sessions-panel";
 import { TicketsPanel } from "@/components/admin/tickets-panel";
 import { BookingsPanel } from "@/components/admin/bookings-panel";
 import { AutoAllocateButton } from "@/components/admin/auto-allocate-button";
+import { BookingResetPanel } from "@/components/admin/booking-reset-panel";
 
 export default async function AdminEventDetailPage({
   params,
@@ -77,6 +78,8 @@ export default async function AdminEventDetailPage({
       />
 
       <AutoAllocateButton eventId={event.id} />
+
+      <BookingResetPanel eventId={event.id} />
     </div>
   );
 }

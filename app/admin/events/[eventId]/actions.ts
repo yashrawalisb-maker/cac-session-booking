@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { bookSessionForUser, cancelBooking, BookingError } from "@/lib/booking";
@@ -284,4 +285,78 @@ export async function adminCancelBooking(
   await cancelBooking(prisma, { bookingId, adminUserId: admin.id!, note });
   revalidateEvent(eventId);
   return { success: true };
+}
+
+// --- Reset bookings (admin: undo a run / clear test data) ---
+
+/**
+ * Recompute session.bookedCount and allotment.ticketsUsed for an event from the
+ * confirmed-booking source of truth. Zeroes everything with two bulk statements, then
+ * re-applies counts only for the (few) sessions/users that still have confirmed bookings —
+ * so it never does a per-row update across the whole ~400-user roster (which would blow the
+ * 5s interactive-transaction timeout).
+ */
+async function recomputeEventCounters(tx: Prisma.TransactionClient, eventId: string) {
+  await tx.session.updateMany({ where: { eventId }, data: { bookedCount: 0 } });
+  await tx.eventTicketAllotment.updateMany({ where: { eventId }, data: { ticketsUsed: 0 } });
+
+  const bySession = await tx.booking.groupBy({
+    by: ["sessionId"],
+    where: { eventId, status: "confirmed" },
+    _count: { _all: true },
+  });
+  for (const row of bySession) {
+    await tx.session.update({
+      where: { id: row.sessionId },
+      data: { bookedCount: row._count._all },
+    });
+  }
+
+  const byUser = await tx.booking.groupBy({
+    by: ["userId"],
+    where: { eventId, status: "confirmed" },
+    _count: { _all: true },
+  });
+  for (const row of byUser) {
+    await tx.eventTicketAllotment.updateMany({
+      where: { eventId, userId: row.userId },
+      data: { ticketsUsed: row._count._all },
+    });
+  }
+}
+
+/** Delete every auto-allotted booking for the event and restore capacity/tickets. */
+export async function resetAutoAllocations(eventId: string): Promise<ActionState> {
+  await requireAdmin();
+  const removed = await prisma.$transaction(
+    async (tx) => {
+      const del = await tx.booking.deleteMany({ where: { eventId, bookingType: "auto_allotted" } });
+      await recomputeEventCounters(tx, eventId);
+      return del.count;
+    },
+    { timeout: 20000 }
+  );
+  revalidateEvent(eventId);
+  return {
+    success: true,
+    message: `Removed ${removed} auto-allocated booking(s). Capacity and unused tickets restored.`,
+  };
+}
+
+/** Delete ALL bookings for the event (self-selected + auto) and zero every counter. */
+export async function resetAllBookings(eventId: string): Promise<ActionState> {
+  await requireAdmin();
+  const removed = await prisma.$transaction(
+    async (tx) => {
+      const del = await tx.booking.deleteMany({ where: { eventId } });
+      await recomputeEventCounters(tx, eventId);
+      return del.count;
+    },
+    { timeout: 20000 }
+  );
+  revalidateEvent(eventId);
+  return {
+    success: true,
+    message: `Removed all ${removed} booking(s) for this event. Every ticket is now unused.`,
+  };
 }
