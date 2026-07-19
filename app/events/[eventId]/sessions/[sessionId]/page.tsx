@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { isPast } from "@/lib/time";
 import { computeSessionStatus } from "@/lib/sessionStatus";
+import { normalizeImageUrl } from "@/lib/imageUrl";
 import { AppShell } from "@/components/app-shell";
 import { SessionBookPanel } from "@/components/session-book-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -186,7 +187,7 @@ export default async function SessionDetailPage({
                     {session.venuePhotoUrl && (
                       // eslint-disable-next-line @next/next/no-img-element -- admin-supplied external URL, arbitrary domain
                       <img
-                        src={session.venuePhotoUrl}
+                        src={normalizeImageUrl(session.venuePhotoUrl)}
                         alt={session.venueName}
                         className="h-40 w-full rounded-lg object-cover sm:w-56"
                       />
@@ -335,7 +336,7 @@ function SpeakerAvatar({
     return (
       // eslint-disable-next-line @next/next/no-img-element -- admin-supplied external URL, arbitrary domain
       <img
-        src={photoUrl}
+        src={normalizeImageUrl(photoUrl)}
         alt={name}
         style={{ width: size, height: size }}
         className="shrink-0 rounded-full object-cover"
