@@ -28,6 +28,20 @@ export type SessionRow = {
   speakerProfileId: string | null;
   speakerDescription: string | null;
   status: string;
+  speakerName: string | null;
+  speakerRole: string | null;
+  speakerPhotoUrl: string | null;
+  speakerBio: string | null;
+  speakerProfileUrl: string | null;
+  venueDescription: string | null;
+  venuePhotoUrl: string | null;
+  venueMapUrl: string | null;
+  campus: string | null;
+  eventType: string | null;
+  organizedBy: string | null;
+  keyTakeaways: string | null;
+  agenda: string | null;
+  whoShouldAttend: string | null;
 };
 
 export function SessionsPanel({ eventId, sessions }: { eventId: string; sessions: SessionRow[] }) {
@@ -93,6 +107,20 @@ export function SessionsPanel({ eventId, sessions }: { eventId: string; sessions
                         capacity: s.capacity,
                         speakerProfileId: s.speakerProfileId ?? "",
                         speakerDescription: s.speakerDescription ?? "",
+                        speakerName: s.speakerName ?? "",
+                        speakerRole: s.speakerRole ?? "",
+                        speakerPhotoUrl: s.speakerPhotoUrl ?? "",
+                        speakerBio: s.speakerBio ?? "",
+                        speakerProfileUrl: s.speakerProfileUrl ?? "",
+                        venueDescription: s.venueDescription ?? "",
+                        venuePhotoUrl: s.venuePhotoUrl ?? "",
+                        venueMapUrl: s.venueMapUrl ?? "",
+                        campus: s.campus ?? "",
+                        eventType: s.eventType ?? "",
+                        organizedBy: s.organizedBy ?? "",
+                        keyTakeaways: s.keyTakeaways ?? "",
+                        agenda: s.agenda ?? "",
+                        whoShouldAttend: s.whoShouldAttend ?? "",
                       }}
                     />
                     {s.status !== "cancelled" && (

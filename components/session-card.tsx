@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { Clock, MapPin, User, Users, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,7 +54,12 @@ export function SessionCard({
     <Card className={cn("flex flex-col", isBooked && "ring-2 ring-success/40")}>
       <CardContent className="flex flex-1 flex-col gap-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-base font-semibold tracking-tight">{title}</h3>
+          <Link
+            href={`/events/${eventId}/sessions/${sessionId}`}
+            className="text-base font-semibold tracking-tight hover:underline"
+          >
+            {title}
+          </Link>
           <StatusBadge status={effectiveStatus} seatsRemaining={seatsRemaining} />
         </div>
 
@@ -82,6 +88,13 @@ export function SessionCard({
             </span>
           </span>
         </div>
+
+        <Link
+          href={`/events/${eventId}/sessions/${sessionId}`}
+          className="text-sm font-medium text-primary hover:underline"
+        >
+          View details
+        </Link>
 
         {state?.error && (
           <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">

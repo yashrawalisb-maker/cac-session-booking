@@ -104,6 +104,23 @@ model Session {
   status               SessionStatus @default(open)
   createdAt            DateTime      @default(now()) @map("created_at")
 
+  // Detail-page enrichment fields — all optional, purely additive. When empty the detail
+  // page falls back to the fields above (speakerDescription etc.) or hides the section.
+  speakerName          String?       @map("speaker_name")
+  speakerRole          String?       @map("speaker_role")
+  speakerPhotoUrl      String?       @map("speaker_photo_url")
+  speakerBio           String?       @map("speaker_bio")
+  speakerProfileUrl    String?       @map("speaker_profile_url")
+  venueDescription     String?       @map("venue_description")
+  venuePhotoUrl        String?       @map("venue_photo_url")
+  venueMapUrl          String?       @map("venue_map_url")
+  campus               String?
+  eventType            String?       @map("event_type")
+  organizedBy          String?       @map("organized_by")
+  keyTakeaways         String?       @map("key_takeaways") // newline-separated bullets
+  agenda               String?
+  whoShouldAttend      String?       @map("who_should_attend")
+
   event    Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
   bookings Booking[]
 

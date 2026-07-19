@@ -68,6 +68,22 @@ function parseSessionForm(formData: FormData) {
   const speakerProfileId = String(formData.get("speakerProfileId") ?? "").trim();
   const speakerDescription = String(formData.get("speakerDescription") ?? "").trim();
 
+  // Detail-page enrichment — all optional.
+  const speakerName = String(formData.get("speakerName") ?? "").trim();
+  const speakerRole = String(formData.get("speakerRole") ?? "").trim();
+  const speakerPhotoUrl = String(formData.get("speakerPhotoUrl") ?? "").trim();
+  const speakerBio = String(formData.get("speakerBio") ?? "").trim();
+  const speakerProfileUrl = String(formData.get("speakerProfileUrl") ?? "").trim();
+  const venueDescription = String(formData.get("venueDescription") ?? "").trim();
+  const venuePhotoUrl = String(formData.get("venuePhotoUrl") ?? "").trim();
+  const venueMapUrl = String(formData.get("venueMapUrl") ?? "").trim();
+  const campus = String(formData.get("campus") ?? "").trim();
+  const eventType = String(formData.get("eventType") ?? "").trim();
+  const organizedBy = String(formData.get("organizedBy") ?? "").trim();
+  const keyTakeaways = String(formData.get("keyTakeaways") ?? "").trim();
+  const agenda = String(formData.get("agenda") ?? "").trim();
+  const whoShouldAttend = String(formData.get("whoShouldAttend") ?? "").trim();
+
   if (!title || !dayLabel || !startsAt || !endsAt || !venueName || !capacity) {
     return { error: "Title, day, start/end time, venue, and capacity are required." } as const;
   }
@@ -87,6 +103,20 @@ function parseSessionForm(formData: FormData) {
       capacity,
       speakerProfileId: speakerProfileId || null,
       speakerDescription: speakerDescription || null,
+      speakerName: speakerName || null,
+      speakerRole: speakerRole || null,
+      speakerPhotoUrl: speakerPhotoUrl || null,
+      speakerBio: speakerBio || null,
+      speakerProfileUrl: speakerProfileUrl || null,
+      venueDescription: venueDescription || null,
+      venuePhotoUrl: venuePhotoUrl || null,
+      venueMapUrl: venueMapUrl || null,
+      campus: campus || null,
+      eventType: eventType || null,
+      organizedBy: organizedBy || null,
+      keyTakeaways: keyTakeaways || null,
+      agenda: agenda || null,
+      whoShouldAttend: whoShouldAttend || null,
     },
   } as const;
 }

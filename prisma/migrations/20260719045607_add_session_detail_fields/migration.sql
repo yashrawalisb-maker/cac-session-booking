@@ -1,0 +1,15 @@
+-- AlterTable
+ALTER TABLE "sessions" ADD COLUMN     "agenda" TEXT,
+ADD COLUMN     "campus" TEXT,
+ADD COLUMN     "event_type" TEXT,
+ADD COLUMN     "key_takeaways" TEXT,
+ADD COLUMN     "organized_by" TEXT,
+ADD COLUMN     "speaker_bio" TEXT,
+ADD COLUMN     "speaker_name" TEXT,
+ADD COLUMN     "speaker_photo_url" TEXT,
+ADD COLUMN     "speaker_profile_url" TEXT,
+ADD COLUMN     "speaker_role" TEXT,
+ADD COLUMN     "venue_description" TEXT,
+ADD COLUMN     "venue_map_url" TEXT,
+ADD COLUMN     "venue_photo_url" TEXT,
+ADD COLUMN     "who_should_attend" TEXT;

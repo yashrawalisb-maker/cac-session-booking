@@ -31,6 +31,7 @@ export async function bookSessionAction(
   }
 
   revalidatePath(`/events/${eventId}`);
+  revalidatePath(`/events/${eventId}/sessions/${sessionId}`);
   revalidatePath("/dashboard");
   return { success: true };
 }

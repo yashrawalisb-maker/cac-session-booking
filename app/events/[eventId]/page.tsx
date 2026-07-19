@@ -5,7 +5,8 @@ import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { isPast } from "@/lib/time";
 import { AppShell } from "@/components/app-shell";
-import { SessionCard, type SessionCardStatus } from "@/components/session-card";
+import { SessionCard } from "@/components/session-card";
+import { computeSessionStatus } from "@/lib/sessionStatus";
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -101,14 +102,13 @@ export default async function EventDetailPage({
                 .map((s) => {
                   const bookingType = bookingBySession.get(s.id);
                   const seatsRemaining = Math.max(s.capacity - s.bookedCount, 0);
-
-                  let status: SessionCardStatus;
-                  if (bookingType === "auto_allotted") status = "booked_auto";
-                  else if (bookingType) status = "booked";
-                  else if (seatsRemaining <= 0 || s.status !== "open") status = "full";
-                  else if (ticketsRemaining <= 0) status = "no_tickets";
-                  else if (deadlinePassed) status = "deadline_passed";
-                  else status = "bookable";
+                  const status = computeSessionStatus({
+                    bookingType,
+                    seatsRemaining,
+                    sessionStatus: s.status,
+                    ticketsRemaining,
+                    deadlinePassed,
+                  });
 
                   return (
                     <SessionCard
