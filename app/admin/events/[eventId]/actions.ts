@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { Prisma } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
@@ -52,6 +53,30 @@ export async function updateEvent(
 
   revalidateEvent(eventId);
   return { success: true };
+}
+
+/**
+ * Permanently delete an event and everything under it. The schema's `onDelete: Cascade` FKs
+ * mean a single delete removes the event's sessions, ticket allotments, bookings, and their
+ * acknowledgment logs in one DB-level cascade. Guarded by a name match on the client, and
+ * re-checked here so a stale/tampered request can't delete the wrong event.
+ */
+export async function deleteEvent(
+  eventId: string,
+  confirmName: string
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { name: true } });
+  if (!event) return { error: "Event not found." };
+  if (confirmName.trim() !== event.name) {
+    return { error: "The typed name doesn't match the event name." };
+  }
+
+  await prisma.event.delete({ where: { id: eventId } });
+
+  revalidatePath("/admin");
+  redirect("/admin");
 }
 
 // --- Sessions ---
