@@ -38,6 +38,38 @@ Full spec: [`CAC_Session_Booking_PRD.md`](./CAC_Session_Booking_PRD.md),
 Seed data creates an admin (`cacadmin@isb.edu` / `ADMIN001`), ~20 demo users
 (`PGP2027001`–`PGP2027020`), and an "OCC" event with 8 sessions across 2 days.
 
+## Microsoft (Entra ID) sign-in
+
+The login page offers "Sign in with Microsoft" alongside the roster (email + PGP ID) form.
+The button only renders when all three `AUTH_MICROSOFT_ENTRA_ID_*` vars are set
+([`auth.ts`](./auth.ts)). Whichever email Microsoft returns must match a roster `isbEmail` in
+our DB, or the sign-in is rejected with `?error=NotRegistered` — so the roster is the
+authorization gate, not the tenant.
+
+**App registration** (Azure Portal → App registrations, "ISB CAC platform"):
+
+- **Client ID:** `5e6de170-230c-4dca-bd0e-8e6ba99319a6`
+- **Account type (`signInAudience`):** `AzureADMultipleOrgs` (multi-tenant). Required because
+  the app is registered in a personal directory but must accept users from ISB's *separate*
+  tenant.
+- **Issuer:** scoped to ISB's tenant so only ISB accounts can authenticate —
+  `https://login.microsoftonline.com/a4dae443-38ab-404a-b331-9d1d337fcf37/v2.0`
+- **Redirect URIs** (Authentication → Web — exact match, no trailing slash):
+  - `http://localhost:3000/api/auth/callback/microsoft-entra-id` (local dev)
+  - `https://cac-session-booking.vercel.app/api/auth/callback/microsoft-entra-id` (production)
+
+**Env vars** — set the three `AUTH_MICROSOFT_ENTRA_ID_*` locally in `.env` and in Vercel →
+Project Settings → Environment Variables. The client secret is created under Azure →
+Certificates & secrets (copy the **Value**, not the Secret ID).
+
+**Gotchas:**
+
+- **Secret expiry:** Azure client secrets expire (6/12/24 months). When the secret expires,
+  Microsoft logins break until a new secret is generated and updated in both `.env` and Vercel.
+- **Consent:** the first ISB user to sign in may hit a consent prompt; if ISB's tenant requires
+  admin approval for third-party apps, an ISB IT admin must approve it once before anyone can
+  log in.
+
 ## Verifying the booking concurrency guarantee
 
 ```bash
