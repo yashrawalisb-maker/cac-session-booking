@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarClock, MapPin, Users, ExternalLink } from "lucide-react";
+import { ArrowLeft, CalendarClock, MapPin, Users, ExternalLink, UserRound } from "lucide-react";
 import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { isPast } from "@/lib/time";
@@ -180,31 +180,40 @@ export default async function SessionDetailPage({
 
               <TabsContent value="speaker" className="rounded-xl border border-border bg-card p-5">
                 <h2 className="mb-3 text-base font-semibold">About the speaker</h2>
-                {hasSpeaker ? (
-                  <div className="flex flex-col gap-4 sm:flex-row">
-                    <SpeakerAvatar name={speakerName ?? "Speaker"} photoUrl={session.speakerPhotoUrl} size={64} />
-                    <div className="flex flex-1 flex-col gap-1">
-                      {speakerName && <p className="font-semibold text-foreground">{speakerName}</p>}
-                      {speakerRole && <p className="text-sm text-muted-foreground">{speakerRole}</p>}
-                      {speakerBio && (
-                        <p className="mt-2 text-sm whitespace-pre-line text-muted-foreground">{speakerBio}</p>
-                      )}
-                      {session.speakerProfileUrl && (
-                        <a
-                          href={session.speakerProfileUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-2 inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-                        >
-                          View full profile
-                          <ExternalLink className="size-3.5" />
-                        </a>
-                      )}
-                    </div>
+                <div className="flex flex-col gap-4 sm:flex-row">
+                  <SpeakerAvatar
+                    name={speakerName ?? "Speaker"}
+                    photoUrl={session.speakerPhotoUrl}
+                    placeholder={!hasSpeaker}
+                    size={64}
+                  />
+                  <div className="flex flex-1 flex-col gap-1">
+                    <p className="font-semibold text-foreground">{speakerName ?? "To be announced"}</p>
+                    {speakerRole ? (
+                      <p className="text-sm text-muted-foreground">{speakerRole}</p>
+                    ) : (
+                      !hasSpeaker && (
+                        <p className="text-sm text-muted-foreground">
+                          Speaker details will be shared here soon.
+                        </p>
+                      )
+                    )}
+                    {speakerBio && (
+                      <p className="mt-2 text-sm whitespace-pre-line text-muted-foreground">{speakerBio}</p>
+                    )}
+                    {session.speakerProfileUrl && (
+                      <a
+                        href={session.speakerProfileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                      >
+                        View full profile
+                        <ExternalLink className="size-3.5" />
+                      </a>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No speaker details added yet.</p>
-                )}
+                </div>
               </TabsContent>
 
               <TabsContent value="agenda" className="rounded-xl border border-border bg-card p-5">
@@ -229,29 +238,38 @@ export default async function SessionDetailPage({
 
           {/* Sidebar */}
           <div className="flex flex-col gap-4">
-            {hasSpeaker && (
-              <div className="rounded-xl border border-border bg-card p-4">
-                <h3 className="mb-3 text-sm font-semibold">Speaker profile</h3>
-                <div className="flex items-center gap-3">
-                  <SpeakerAvatar name={speakerName ?? "Speaker"} photoUrl={session.speakerPhotoUrl} size={48} />
-                  <div>
-                    {speakerName && <p className="text-sm font-semibold text-foreground">{speakerName}</p>}
-                    {speakerRole && <p className="text-xs text-muted-foreground">{speakerRole}</p>}
-                  </div>
+            <div className="rounded-xl border border-border bg-card p-4">
+              <h3 className="mb-3 text-sm font-semibold">Speaker profile</h3>
+              <div className="flex items-center gap-3">
+                <SpeakerAvatar
+                  name={speakerName ?? "Speaker"}
+                  photoUrl={session.speakerPhotoUrl}
+                  placeholder={!hasSpeaker}
+                  size={48}
+                />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {speakerName ?? "To be announced"}
+                  </p>
+                  {speakerRole ? (
+                    <p className="text-xs text-muted-foreground">{speakerRole}</p>
+                  ) : (
+                    !hasSpeaker && <p className="text-xs text-muted-foreground">Coming soon</p>
+                  )}
                 </div>
-                {session.speakerProfileUrl && (
-                  <a
-                    href={session.speakerProfileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-                  >
-                    View full profile
-                    <ExternalLink className="size-3.5" />
-                  </a>
-                )}
               </div>
-            )}
+              {session.speakerProfileUrl && (
+                <a
+                  href={session.speakerProfileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                >
+                  View full profile
+                  <ExternalLink className="size-3.5" />
+                </a>
+              )}
+            </div>
 
             <div className="rounded-xl border border-border bg-card p-4">
               <h3 className="mb-1 text-sm font-semibold">Event details</h3>
@@ -286,10 +304,12 @@ function SpeakerAvatar({
   name,
   photoUrl,
   size,
+  placeholder = false,
 }: {
   name: string;
   photoUrl: string | null;
   size: number;
+  placeholder?: boolean;
 }) {
   if (photoUrl) {
     return (
@@ -307,7 +327,7 @@ function SpeakerAvatar({
       style={{ width: size, height: size }}
       className="flex shrink-0 items-center justify-center rounded-full bg-brand-navy-tint text-sm font-semibold text-primary"
     >
-      {initials(name)}
+      {placeholder ? <UserRound style={{ width: size * 0.5, height: size * 0.5 }} /> : initials(name)}
     </div>
   );
 }
