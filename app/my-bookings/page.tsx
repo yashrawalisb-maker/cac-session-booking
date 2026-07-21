@@ -3,6 +3,7 @@ import { Clock, MapPin, CalendarX2 } from "lucide-react";
 import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { isPast } from "@/lib/time";
+import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -82,7 +83,10 @@ function BookingRow({ booking }: { booking: BookingWithRefs }) {
 
 export default async function MyBookingsPage() {
   const user = await requireUser();
-  const bookings = await loadBookings(user.id!);
+  const [bookings, unreadUpdates] = await Promise.all([
+    loadBookings(user.id!),
+    hasUnreadAnnouncements(user.id!),
+  ]);
 
   const upcoming = bookings.filter(
     (b) => b.status === "confirmed" && !isPast(b.session.startsAt)
@@ -93,7 +97,7 @@ export default async function MyBookingsPage() {
   const cancelled = bookings.filter((b) => b.status === "cancelled_by_admin");
 
   return (
-    <AppShell variant="student" userName={user.name ?? user.email ?? ""} userSubtitle={user.email ?? undefined}>
+    <AppShell variant="student" userName={user.name ?? user.email ?? ""} userSubtitle={user.email ?? undefined} unreadUpdates={unreadUpdates}>
       <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">My Bookings</h1>

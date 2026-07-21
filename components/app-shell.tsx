@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Ticket, Users, LogOut, Menu, X, Bell } from "lucide-react";
+import { LayoutDashboard, Ticket, Users, LogOut, Menu, X, Bell, Megaphone } from "lucide-react";
 import { IsbLogo } from "@/components/isb-logo";
 import { logout } from "@/app/logout-action";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,12 @@ const STUDENT_NAV: NavItem[] = [
     icon: Ticket,
     isActive: (p) => p.startsWith("/my-bookings"),
   },
+  {
+    label: "Updates",
+    href: "/updates",
+    icon: Megaphone,
+    isActive: (p) => p.startsWith("/updates"),
+  },
 ];
 
 const ADMIN_NAV: NavItem[] = [
@@ -43,6 +49,12 @@ const ADMIN_NAV: NavItem[] = [
     icon: Users,
     isActive: (p) => p.startsWith("/admin/users"),
   },
+  {
+    label: "Announcements",
+    href: "/admin/announcements",
+    icon: Megaphone,
+    isActive: (p) => p.startsWith("/admin/announcements"),
+  },
 ];
 
 function initials(name: string) {
@@ -56,11 +68,14 @@ export function AppShell({
   variant,
   userName,
   userSubtitle,
+  unreadUpdates = false,
   children,
 }: {
   variant: "student" | "admin";
   userName: string;
   userSubtitle?: string;
+  /** Shows a dot on the bell; student pages compute this via hasUnreadAnnouncements(). */
+  unreadUpdates?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -155,12 +170,16 @@ export function AppShell({
           </div>
 
           <div className="ml-auto flex items-center gap-3 sm:gap-4">
-            <span
-              className="flex size-9 items-center justify-center rounded-full text-muted-foreground"
-              aria-hidden="true"
+            <Link
+              href={variant === "admin" ? "/admin/announcements" : "/updates"}
+              className="relative flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label={unreadUpdates ? "Updates (new announcements)" : "Updates"}
             >
               <Bell className="size-5" />
-            </span>
+              {unreadUpdates && (
+                <span className="absolute right-1.5 top-1.5 size-2.5 rounded-full border-2 border-card bg-danger" />
+              )}
+            </Link>
             <div className="flex items-center gap-2.5">
               <span className="flex size-9 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                 {initials(userName)}

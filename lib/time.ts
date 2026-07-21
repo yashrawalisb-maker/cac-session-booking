@@ -7,6 +7,16 @@ export function now(): Date {
   return new Date();
 }
 
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+/** UTC instants bounding "today" in Asia/Kolkata (IST has no DST, so a fixed offset is safe). */
+export function istDayWindow(reference: Date = new Date()): { start: Date; end: Date } {
+  const ist = new Date(reference.getTime() + IST_OFFSET_MS);
+  const startMs =
+    Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate()) - IST_OFFSET_MS;
+  return { start: new Date(startMs), end: new Date(startMs + 24 * 60 * 60 * 1000) };
+}
+
 /** Time-of-day greeting based on the current hour in IST (all events are India-based). */
 export function greetingForIST(): string {
   const hour = Number(

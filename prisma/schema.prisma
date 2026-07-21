@@ -43,11 +43,13 @@ model User {
   section    String? // cohort section, e.g. "G" — reference only, not used in booking logic
   studyGroup String?  @map("study_group") // e.g. "G12" — reference only
   createdAt  DateTime @default(now()) @map("created_at")
+  announcementsSeenAt DateTime? @map("announcements_seen_at") // drives the unread bell dot
 
   createdEvents     Event[]                @relation("EventCreatedBy")
   ticketAllotments  EventTicketAllotment[]
   bookings          Booking[]
   loginAttempts     LoginAttempt[]
+  announcements     Announcement[]         @relation("AnnouncementCreatedBy")
 
   @@map("users")
 }
@@ -68,8 +70,25 @@ model Event {
   sessions         Session[]
   ticketAllotments EventTicketAllotment[]
   bookings         Booking[]
+  announcements    Announcement[]
 
   @@map("events")
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  eventId     String?  @map("event_id") // null = global (visible to every student)
+  createdById String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  event     Event? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdBy User   @relation("AnnouncementCreatedBy", fields: [createdById], references: [id])
+
+  @@index([createdAt])
+  @@map("announcements")
 }
 
 model EventTicketAllotment {

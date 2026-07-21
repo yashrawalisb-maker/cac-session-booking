@@ -3,6 +3,7 @@ import { CalendarDays, ArrowRight, Ticket } from "lucide-react";
 import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { isPast, now, greetingForIST } from "@/lib/time";
+import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,7 @@ export default async function DashboardPage() {
   const user = await requireUser();
   const firstName = (user.name ?? "there").trim().split(/\s+/)[0];
 
-  const [allotments, upcoming] = await Promise.all([
+  const [allotments, upcoming, unreadUpdates] = await Promise.all([
     prisma.eventTicketAllotment.findMany({
       where: { userId: user.id!, event: { status: "published" } },
       include: { event: true },
@@ -44,10 +45,11 @@ export default async function DashboardPage() {
       include: { session: true, event: true },
       orderBy: { session: { startsAt: "asc" } },
     }),
+    hasUnreadAnnouncements(user.id!),
   ]);
 
   return (
-    <AppShell variant="student" userName={user.name ?? user.email ?? ""} userSubtitle={user.email ?? undefined}>
+    <AppShell variant="student" userName={user.name ?? user.email ?? ""} userSubtitle={user.email ?? undefined} unreadUpdates={unreadUpdates}>
       <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">

@@ -7,6 +7,7 @@ import { isPast } from "@/lib/time";
 import { computeSessionStatus } from "@/lib/sessionStatus";
 import { normalizeImageUrl } from "@/lib/imageUrl";
 import { clubLabel } from "@/lib/clubs";
+import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { AppShell } from "@/components/app-shell";
 import { SessionBookPanel } from "@/components/session-book-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -77,10 +78,13 @@ export default async function SessionDetailPage({
   });
   if (!allotment) notFound();
 
-  const myBooking = await prisma.booking.findUnique({
-    where: { userId_sessionId: { userId: user.id!, sessionId } },
-    select: { bookingType: true, status: true },
-  });
+  const [myBooking, unreadUpdates] = await Promise.all([
+    prisma.booking.findUnique({
+      where: { userId_sessionId: { userId: user.id!, sessionId } },
+      select: { bookingType: true, status: true },
+    }),
+    hasUnreadAnnouncements(user.id!),
+  ]);
 
   const deadlinePassed = isPast(event.bookingDeadline);
   const ticketsRemaining = allotment.ticketsAllotted - allotment.ticketsUsed;
@@ -103,7 +107,7 @@ export default async function SessionDetailPage({
   const whoShouldAttend = session.whoShouldAttend?.trim();
 
   return (
-    <AppShell variant="student" userName={user.name ?? user.email ?? ""} userSubtitle={user.email ?? undefined}>
+    <AppShell variant="student" userName={user.name ?? user.email ?? ""} userSubtitle={user.email ?? undefined} unreadUpdates={unreadUpdates}>
       <div className="flex flex-col gap-6">
         <Link
           href={`/events/${eventId}`}
