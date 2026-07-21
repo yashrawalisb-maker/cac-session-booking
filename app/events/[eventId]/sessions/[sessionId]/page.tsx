@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarClock, MapPin, Users, ExternalLink } from "lucide-react";
 import { requireUser } from "@/lib/authz";
@@ -143,14 +142,6 @@ export default async function SessionDetailPage({
               </span>
             </div>
           </div>
-          <Image
-            src="/campus.png"
-            alt=""
-            width={655}
-            height={323}
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-24 w-full select-none object-cover object-bottom opacity-90 sm:h-32"
-          />
         </div>
 
         {/* Main content */}
@@ -180,43 +171,6 @@ export default async function SessionDetailPage({
                       <Bullets text={keyTakeaways} />
                     </>
                   )}
-                </div>
-
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <h2 className="mb-3 text-base font-semibold">About the venue</h2>
-                  <div className="flex flex-col gap-4 sm:flex-row">
-                    {session.venuePhotoUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element -- admin-supplied external URL, arbitrary domain
-                      <img
-                        src={normalizeImageUrl(session.venuePhotoUrl)}
-                        alt={session.venueName}
-                        className="h-40 w-full rounded-lg object-cover sm:w-56"
-                      />
-                    )}
-                    <div className="flex flex-1 flex-col gap-1.5">
-                      <p className="font-medium text-foreground">
-                        {session.venueName}
-                        {session.venueLocation ? `, ${session.venueLocation}` : ""}
-                      </p>
-                      {session.campus && <p className="text-sm text-muted-foreground">{session.campus}</p>}
-                      {session.venueDescription && (
-                        <p className="mt-1 text-sm whitespace-pre-line text-muted-foreground">
-                          {session.venueDescription}
-                        </p>
-                      )}
-                      {session.venueMapUrl && (
-                        <a
-                          href={session.venueMapUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-2 inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-                        >
-                          <MapPin className="size-4" />
-                          View on map
-                        </a>
-                      )}
-                    </div>
-                  </div>
                 </div>
               </TabsContent>
 
