@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { bookSessionForUser, cancelBooking, BookingError } from "@/lib/booking";
 import { parseCsvWithHeader } from "@/lib/csv";
+import { isClubValue } from "@/lib/clubs";
 
 export type ActionState = { error?: string; success?: boolean; message?: string } | undefined;
 
@@ -104,7 +105,8 @@ function parseSessionForm(formData: FormData) {
   const venueMapUrl = String(formData.get("venueMapUrl") ?? "").trim();
   const campus = String(formData.get("campus") ?? "").trim();
   const eventType = String(formData.get("eventType") ?? "").trim();
-  const organizedBy = String(formData.get("organizedBy") ?? "").trim();
+  // organizedBy is legacy free-text — no longer editable; the structured `club` replaces it.
+  const club = String(formData.get("club") ?? "").trim();
   const keyTakeaways = String(formData.get("keyTakeaways") ?? "").trim();
   const agenda = String(formData.get("agenda") ?? "").trim();
   const whoShouldAttend = String(formData.get("whoShouldAttend") ?? "").trim();
@@ -114,6 +116,9 @@ function parseSessionForm(formData: FormData) {
   }
   if (new Date(endsAt) <= new Date(startsAt)) {
     return { error: "End time must be after start time." } as const;
+  }
+  if (club && !isClubValue(club)) {
+    return { error: "Select a valid club." } as const;
   }
 
   return {
@@ -138,7 +143,7 @@ function parseSessionForm(formData: FormData) {
       venueMapUrl: venueMapUrl || null,
       campus: campus || null,
       eventType: eventType || null,
-      organizedBy: organizedBy || null,
+      club: club || null,
       keyTakeaways: keyTakeaways || null,
       agenda: agenda || null,
       whoShouldAttend: whoShouldAttend || null,

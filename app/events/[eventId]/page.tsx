@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { isPast } from "@/lib/time";
 import { AppShell } from "@/components/app-shell";
-import { SessionCard } from "@/components/session-card";
+import { SessionListFiltered, type FilterableSession } from "@/components/session-list-filtered";
 import { computeSessionStatus } from "@/lib/sessionStatus";
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
@@ -58,7 +58,30 @@ export default async function EventDetailPage({
   const deadlinePassed = isPast(event.bookingDeadline);
   const ticketsRemaining = allotment.ticketsAllotted - allotment.ticketsUsed;
 
-  const dayLabels = Array.from(new Set(sessions.map((s) => s.dayLabel)));
+  const filterableSessions: FilterableSession[] = sessions.map((s) => {
+    const bookingType = bookingBySession.get(s.id);
+    const seatsRemaining = Math.max(s.capacity - s.bookedCount, 0);
+    return {
+      sessionId: s.id,
+      title: s.title,
+      description: s.description,
+      dayLabel: s.dayLabel,
+      timeLabel: `${DATE_FORMATTER.format(s.startsAt)}, ${TIME_FORMATTER.format(s.startsAt)} – ${TIME_FORMATTER.format(s.endsAt)}`,
+      venueName: s.venueName,
+      venueLocation: s.venueLocation,
+      speaker: s.speakerDescription,
+      club: s.club,
+      seatsRemaining,
+      capacity: s.capacity,
+      status: computeSessionStatus({
+        bookingType,
+        seatsRemaining,
+        sessionStatus: s.status,
+        ticketsRemaining,
+        deadlinePassed,
+      }),
+    };
+  });
 
   return (
     <AppShell variant="student" userName={user.name ?? user.email ?? ""} userSubtitle={user.email ?? undefined}>
@@ -93,43 +116,7 @@ export default async function EventDetailPage({
           </div>
         </div>
 
-        {dayLabels.map((day) => (
-          <section key={day}>
-            <h2 className="mb-3 text-lg font-semibold tracking-tight">{day}</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {sessions
-                .filter((s) => s.dayLabel === day)
-                .map((s) => {
-                  const bookingType = bookingBySession.get(s.id);
-                  const seatsRemaining = Math.max(s.capacity - s.bookedCount, 0);
-                  const status = computeSessionStatus({
-                    bookingType,
-                    seatsRemaining,
-                    sessionStatus: s.status,
-                    ticketsRemaining,
-                    deadlinePassed,
-                  });
-
-                  return (
-                    <SessionCard
-                      key={s.id}
-                      eventId={event.id}
-                      sessionId={s.id}
-                      title={s.title}
-                      description={s.description}
-                      timeLabel={`${DATE_FORMATTER.format(s.startsAt)}, ${TIME_FORMATTER.format(s.startsAt)} – ${TIME_FORMATTER.format(s.endsAt)}`}
-                      venueName={s.venueName}
-                      venueLocation={s.venueLocation}
-                      speaker={s.speakerDescription}
-                      seatsRemaining={seatsRemaining}
-                      capacity={s.capacity}
-                      status={status}
-                    />
-                  );
-                })}
-            </div>
-          </section>
-        ))}
+        <SessionListFiltered eventId={event.id} sessions={filterableSessions} />
       </div>
     </AppShell>
   );

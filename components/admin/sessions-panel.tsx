@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SessionFormDialog } from "@/components/admin/session-form-dialog";
 import { createSession, updateSession, cancelSession } from "@/app/admin/events/[eventId]/actions";
+import { clubShort } from "@/lib/clubs";
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -38,7 +39,7 @@ export type SessionRow = {
   venueMapUrl: string | null;
   campus: string | null;
   eventType: string | null;
-  organizedBy: string | null;
+  club: string | null;
   keyTakeaways: string | null;
   agenda: string | null;
   whoShouldAttend: string | null;
@@ -61,6 +62,7 @@ export function SessionsPanel({ eventId, sessions }: { eventId: string; sessions
           <TableHeader>
             <TableRow>
               <TableHead>Title</TableHead>
+              <TableHead>Club</TableHead>
               <TableHead>Day</TableHead>
               <TableHead>Time</TableHead>
               <TableHead>Venue</TableHead>
@@ -73,6 +75,13 @@ export function SessionsPanel({ eventId, sessions }: { eventId: string; sessions
             {sessions.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="font-medium">{s.title}</TableCell>
+                <TableCell>
+                  {s.club ? (
+                    <Badge variant="secondary">{clubShort(s.club)}</Badge>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
                 <TableCell>{s.dayLabel}</TableCell>
                 <TableCell className="whitespace-nowrap">
                   {TIME_FORMATTER.format(s.startsAt)}–{TIME_FORMATTER.format(s.endsAt)}
@@ -117,7 +126,7 @@ export function SessionsPanel({ eventId, sessions }: { eventId: string; sessions
                         venueMapUrl: s.venueMapUrl ?? "",
                         campus: s.campus ?? "",
                         eventType: s.eventType ?? "",
-                        organizedBy: s.organizedBy ?? "",
+                        club: s.club ?? "",
                         keyTakeaways: s.keyTakeaways ?? "",
                         agenda: s.agenda ?? "",
                         whoShouldAttend: s.whoShouldAttend ?? "",
@@ -136,7 +145,7 @@ export function SessionsPanel({ eventId, sessions }: { eventId: string; sessions
             ))}
             {sessions.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   No sessions yet.
                 </TableCell>
               </TableRow>

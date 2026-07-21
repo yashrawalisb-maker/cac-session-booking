@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import type { ActionState } from "@/app/admin/events/[eventId]/actions";
+import { CLUBS } from "@/lib/clubs";
 
 function toLocalInputValue(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -41,7 +42,7 @@ export type SessionDefaults = {
   venueMapUrl: string;
   campus: string;
   eventType: string;
-  organizedBy: string;
+  club: string;
   keyTakeaways: string;
   agenda: string;
   whoShouldAttend: string;
@@ -134,8 +135,20 @@ export function SessionFormDialog({
               <Input id="eventType" name="eventType" placeholder="Masterclass, Panel, Workshop…" defaultValue={defaults?.eventType} />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="organizedBy">Organized by</Label>
-              <Input id="organizedBy" name="organizedBy" placeholder="Marketing Club, ISB" defaultValue={defaults?.organizedBy} />
+              <Label htmlFor="club">Club</Label>
+              <select
+                id="club"
+                name="club"
+                defaultValue={defaults?.club ?? ""}
+                className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                <option value="">— Select club —</option>
+                {CLUBS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </FormSection>
 

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { isPast } from "@/lib/time";
 import { computeSessionStatus } from "@/lib/sessionStatus";
 import { normalizeImageUrl } from "@/lib/imageUrl";
+import { clubLabel } from "@/lib/clubs";
 import { AppShell } from "@/components/app-shell";
 import { SessionBookPanel } from "@/components/session-book-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -307,7 +308,7 @@ export default async function SessionDetailPage({
                 />
                 <DetailRow label="Campus" value={session.campus} />
                 <DetailRow label="Event type" value={session.eventType} />
-                <DetailRow label="Organized by" value={session.organizedBy} />
+                <DetailRow label="Club" value={clubLabel(session.club)} />
                 <DetailRow
                   label="Seats"
                   value={<span className="text-success">{seatsRemaining} of {session.capacity} remaining</span>}

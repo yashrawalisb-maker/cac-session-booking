@@ -116,7 +116,8 @@ model Session {
   venueMapUrl          String?       @map("venue_map_url")
   campus               String?
   eventType            String?       @map("event_type")
-  organizedBy          String?       @map("organized_by")
+  organizedBy          String?       @map("organized_by") // legacy free-text, no longer shown or edited — superseded by `club`
+  club                 String?       // stable club value from lib/clubs.ts CLUBS (e.g. "consulting")
   keyTakeaways         String?       @map("key_takeaways") // newline-separated bullets
   agenda               String?
   whoShouldAttend      String?       @map("who_should_attend")

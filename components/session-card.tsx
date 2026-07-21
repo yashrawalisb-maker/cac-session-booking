@@ -25,6 +25,7 @@ export function SessionCard({
   venueName,
   venueLocation,
   speaker,
+  clubName,
   seatsRemaining,
   capacity,
   status,
@@ -37,6 +38,7 @@ export function SessionCard({
   venueName: string;
   venueLocation?: string | null;
   speaker?: string | null;
+  clubName?: string | null;
   seatsRemaining: number;
   capacity: number;
   status: SessionCardStatus;
@@ -62,6 +64,12 @@ export function SessionCard({
           </Link>
           <StatusBadge status={effectiveStatus} seatsRemaining={seatsRemaining} />
         </div>
+
+        {clubName && (
+          <span className="inline-flex w-fit items-center rounded-full bg-brand-navy-tint px-2.5 py-0.5 text-xs font-medium text-primary">
+            {clubName}
+          </span>
+        )}
 
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
 
