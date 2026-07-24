@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { isPast } from "@/lib/time";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
+import { AddToCalendarLink } from "@/components/add-to-calendar-link";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,13 @@ function BookingRow({ booking }: { booking: BookingWithRefs }) {
               {session.venueLocation ? `, ${session.venueLocation}` : ""}
             </span>
           </div>
+          {!cancelled && (
+            <AddToCalendarLink
+              eventId={event.id}
+              sessionId={session.id}
+              className="mt-2"
+            />
+          )}
         </div>
       </CardContent>
     </Card>

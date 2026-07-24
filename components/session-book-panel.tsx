@@ -5,6 +5,7 @@ import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { bookSessionAction, type BookActionState } from "@/app/events/[eventId]/actions";
 import type { SessionCardStatus } from "@/components/session-card";
+import { AddToCalendarLink } from "@/components/add-to-calendar-link";
 
 export function SessionBookPanel({
   eventId,
@@ -46,9 +47,12 @@ export function SessionBookPanel({
           </Button>
         </form>
       ) : isBooked ? (
-        <div className="flex items-center justify-center gap-2 rounded-lg bg-success-bg py-2 text-sm font-medium text-success">
-          <CheckCircle2 className="size-4" />
-          {effectiveStatus === "booked_auto" ? "Booked (Auto-assigned)" : "Booked"}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-center gap-2 rounded-lg bg-success-bg py-2 text-sm font-medium text-success">
+            <CheckCircle2 className="size-4" />
+            {effectiveStatus === "booked_auto" ? "Booked (Auto-assigned)" : "Booked"}
+          </div>
+          <AddToCalendarLink eventId={eventId} sessionId={sessionId} className="w-full" />
         </div>
       ) : (
         <Button variant="outline" disabled className="w-full">
