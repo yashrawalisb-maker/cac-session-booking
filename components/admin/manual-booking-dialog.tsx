@@ -42,10 +42,10 @@ export function ManualBookingDialog({
         <DialogHeader>
           <DialogTitle>Manual booking override</DialogTitle>
         </DialogHeader>
-        <form action={formAction} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
+        <form action={formAction} className="flex min-w-0 flex-col gap-3">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <Label htmlFor="userId">User</Label>
-            <select id="userId" name="userId" required className="h-9 rounded-md border border-input bg-transparent px-3 text-sm">
+            <select id="userId" name="userId" required className="h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 text-sm">
               <option value="">Select a user…</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
@@ -60,7 +60,7 @@ export function ManualBookingDialog({
               id="sessionId"
               name="sessionId"
               required
-              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+              className="h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 text-sm"
             >
               <option value="">Select a session…</option>
               {sessions.map((s) => (

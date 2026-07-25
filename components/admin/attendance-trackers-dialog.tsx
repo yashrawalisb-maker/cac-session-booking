@@ -99,15 +99,15 @@ export function AttendanceTrackersDialog({
           )}
         </div>
 
-        <form action={formAction} className="flex flex-col gap-3 border-t border-border pt-4">
-          <div className="flex flex-col gap-1.5">
+        <form action={formAction} className="flex min-w-0 flex-col gap-3 border-t border-border pt-4">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <Label htmlFor={`grant-user-${sessionId}`}>Add a tracker</Label>
             <select
               id={`grant-user-${sessionId}`}
               name="userId"
               required
               defaultValue=""
-              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+              className="h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 text-sm"
             >
               <option value="" disabled>
                 Select a roster member…
