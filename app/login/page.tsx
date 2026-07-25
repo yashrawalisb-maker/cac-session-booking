@@ -50,7 +50,7 @@ export default async function LoginPage({
           <h2 className="text-xl font-semibold tracking-tight">Sign in to your account</h2>
           <p className="mt-1 mb-6 text-sm text-muted-foreground">
             {microsoftSignInEnabled
-              ? "Use your ISB email and PGP ID, or sign in with Microsoft."
+              ? "Sign in with your institutional @isb.edu account."
               : "Use your ISB email and PGP ID to continue."}
           </p>
           <LoginForm urlError={error} microsoftSignInEnabled={microsoftSignInEnabled} />

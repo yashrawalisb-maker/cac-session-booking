@@ -28,51 +28,71 @@ export function LoginForm({
           ? "Sign-in failed. Please try again."
           : undefined);
 
-  return (
-    <div className="flex flex-col gap-6">
-      <form action={formAction} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="isbEmail">ISB Email</Label>
-          <Input
-            id="isbEmail"
-            name="isbEmail"
-            type="email"
-            autoComplete="email"
-            placeholder="yourname@isb.edu"
-            required
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="pgpId">PGP ID</Label>
-          <Input id="pgpId" name="pgpId" type="text" placeholder="PGP2027001" required />
-        </div>
+  // The PGP-ID roster form. Primary when Microsoft SSO is unavailable, otherwise the fallback.
+  const rosterForm = (
+    <form action={formAction} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="isbEmail">ISB Email</Label>
+        <Input
+          id="isbEmail"
+          name="isbEmail"
+          type="email"
+          autoComplete="email"
+          placeholder="yourname@isb.edu"
+          required
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="pgpId">PGP ID</Label>
+        <Input id="pgpId" name="pgpId" type="text" placeholder="PGP2027001" required />
+      </div>
+      <Button
+        type="submit"
+        variant={microsoftSignInEnabled ? "outline" : "default"}
+        disabled={pending}
+        className="w-full"
+      >
+        {pending ? "Checking…" : "Log in with PGP ID"}
+      </Button>
+    </form>
+  );
 
+  if (!microsoftSignInEnabled) {
+    return (
+      <div className="flex flex-col gap-4">
         {errorMessage && (
           <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">
             {errorMessage}
           </p>
         )}
+        {rosterForm}
+      </div>
+    );
+  }
 
-        <Button type="submit" disabled={pending} className="w-full">
-          {pending ? "Checking…" : "Log in"}
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Primary: Microsoft SSO */}
+      <form action={loginWithMicrosoft}>
+        <Button type="submit" className="h-11 w-full text-base">
+          Sign in with Microsoft SSO
         </Button>
       </form>
 
-      {microsoftSignInEnabled && (
-        <>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <div className="h-px flex-1 bg-border" />
-            or
-            <div className="h-px flex-1 bg-border" />
-          </div>
-
-          <form action={loginWithMicrosoft}>
-            <Button type="submit" variant="outline" className="w-full">
-              Sign in with Microsoft
-            </Button>
-          </form>
-        </>
+      {errorMessage && (
+        <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">
+          {errorMessage}
+        </p>
       )}
+
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="h-px flex-1 bg-border" />
+        or use your PGP ID
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      {/* Fallback: ISB Email + PGP ID */}
+      {rosterForm}
     </div>
   );
 }
