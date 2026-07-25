@@ -1,5 +1,6 @@
 "use client";
 
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -161,6 +162,15 @@ export function SessionsPanel({
                     />
                     <Button size="sm" variant="outline" render={<a href={`/attendance/${s.id}`} />}>
                       Mark attendance
+                    </Button>
+                    <Button
+                      size="icon-sm"
+                      variant="outline"
+                      render={<a href={`/admin/events/${eventId}/sessions/${s.id}/attendance/export`} />}
+                      aria-label={`Download attendance for ${s.title}`}
+                      title="Download attendance (name, PGP ID, present/absent)"
+                    >
+                      <Download className="size-3.5" />
                     </Button>
                     {s.status !== "cancelled" && (
                       <form action={cancelSession.bind(null, eventId, s.id)}>
