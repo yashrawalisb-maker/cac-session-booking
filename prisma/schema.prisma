@@ -50,6 +50,8 @@ model User {
   bookings          Booking[]
   loginAttempts     LoginAttempt[]
   announcements     Announcement[]         @relation("AnnouncementCreatedBy")
+  attendanceGrants      SessionAttendanceGrant[] @relation("AttendanceGrantee")
+  attendanceGrantsGiven SessionAttendanceGrant[] @relation("AttendanceGrantedBy")
 
   @@map("users")
 }
@@ -141,11 +143,29 @@ model Session {
   agenda               String?
   whoShouldAttend      String?       @map("who_should_attend")
 
-  event    Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  bookings Booking[]
+  event             Event                    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  bookings          Booking[]
+  attendanceGrants  SessionAttendanceGrant[]
 
   @@index([eventId])
   @@map("sessions")
+}
+
+/** Grants a non-admin user permission to mark attendance for one specific session. */
+model SessionAttendanceGrant {
+  id          String   @id @default(cuid())
+  sessionId   String   @map("session_id")
+  userId      String   @map("user_id")
+  grantedById String   @map("granted_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User    @relation("AttendanceGrantee", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy User    @relation("AttendanceGrantedBy", fields: [grantedById], references: [id])
+
+  @@unique([sessionId, userId])
+  @@index([userId])
+  @@map("session_attendance_grants")
 }
 
 model Booking {
@@ -159,6 +179,9 @@ model Booking {
   adminNote     String?       @map("admin_note")
   overriddenBy  String?       @map("overridden_by")
   overriddenAt  DateTime?     @map("overridden_at")
+  attended             Boolean?  @map("attended") // null = not yet marked
+  attendanceMarkedBy   String?   @map("attendance_marked_by")
+  attendanceMarkedAt   DateTime? @map("attendance_marked_at")
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)

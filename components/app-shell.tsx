@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Ticket, Users, LogOut, Menu, X, Bell, Megaphone } from "lucide-react";
+import { LayoutDashboard, Ticket, Users, LogOut, Menu, X, Bell, Megaphone, ClipboardCheck } from "lucide-react";
 import { IsbLogo } from "@/components/isb-logo";
 import { logout } from "@/app/logout-action";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ type NavItem = {
   isActive: (pathname: string) => boolean;
 };
 
-const STUDENT_NAV: NavItem[] = [
+const STUDENT_NAV_BASE: NavItem[] = [
   {
     label: "Dashboard",
     href: "/dashboard",
@@ -35,6 +35,13 @@ const STUDENT_NAV: NavItem[] = [
     isActive: (p) => p.startsWith("/updates"),
   },
 ];
+
+const ATTENDANCE_NAV_ITEM: NavItem = {
+  label: "Attendance",
+  href: "/attendance",
+  icon: ClipboardCheck,
+  isActive: (p) => p.startsWith("/attendance"),
+};
 
 const ADMIN_NAV: NavItem[] = [
   {
@@ -69,6 +76,7 @@ export function AppShell({
   userName,
   userSubtitle,
   unreadUpdates = false,
+  showAttendanceTab = false,
   children,
 }: {
   variant: "student" | "admin";
@@ -76,11 +84,18 @@ export function AppShell({
   userSubtitle?: string;
   /** Shows a dot on the bell; student pages compute this via hasUnreadAnnouncements(). */
   unreadUpdates?: boolean;
+  /** Shows the Attendance tab; student pages compute this via hasAttendanceAccess(). */
+  showAttendanceTab?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const nav = variant === "admin" ? ADMIN_NAV : STUDENT_NAV;
+  const nav =
+    variant === "admin"
+      ? ADMIN_NAV
+      : showAttendanceTab
+        ? [...STUDENT_NAV_BASE, ATTENDANCE_NAV_ITEM]
+        : STUDENT_NAV_BASE;
 
   const sidebar = (
     <div className="flex h-full flex-col gap-2 p-4">

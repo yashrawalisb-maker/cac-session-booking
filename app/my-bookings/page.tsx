@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { isPast } from "@/lib/time";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
+import { hasAttendanceAccess } from "@/lib/attendance";
 import { AddToCalendarLink } from "@/components/add-to-calendar-link";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -91,9 +92,10 @@ function BookingRow({ booking }: { booking: BookingWithRefs }) {
 
 export default async function MyBookingsPage() {
   const user = await requireUser();
-  const [bookings, unreadUpdates] = await Promise.all([
+  const [bookings, unreadUpdates, showAttendanceTab] = await Promise.all([
     loadBookings(user.id!),
     hasUnreadAnnouncements(user.id!),
+    hasAttendanceAccess(user.id!),
   ]);
 
   const upcoming = bookings.filter(
@@ -105,7 +107,13 @@ export default async function MyBookingsPage() {
   const cancelled = bookings.filter((b) => b.status === "cancelled_by_admin");
 
   return (
-    <AppShell variant="student" userName={user.name ?? user.email ?? ""} userSubtitle={user.email ?? undefined} unreadUpdates={unreadUpdates}>
+    <AppShell
+      variant="student"
+      userName={user.name ?? user.email ?? ""}
+      userSubtitle={user.email ?? undefined}
+      unreadUpdates={unreadUpdates}
+      showAttendanceTab={showAttendanceTab}
+    >
       <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">My Bookings</h1>

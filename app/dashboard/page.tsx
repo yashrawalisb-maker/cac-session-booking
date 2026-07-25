@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { isPast, now, greetingForIST } from "@/lib/time";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
+import { hasAttendanceAccess } from "@/lib/attendance";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,7 @@ export default async function DashboardPage() {
   const user = await requireUser();
   const firstName = (user.name ?? "there").trim().split(/\s+/)[0];
 
-  const [allotments, upcoming, unreadUpdates] = await Promise.all([
+  const [allotments, upcoming, unreadUpdates, showAttendanceTab] = await Promise.all([
     prisma.eventTicketAllotment.findMany({
       where: { userId: user.id!, event: { status: "published" } },
       include: { event: true },
@@ -46,10 +47,17 @@ export default async function DashboardPage() {
       orderBy: { session: { startsAt: "asc" } },
     }),
     hasUnreadAnnouncements(user.id!),
+    hasAttendanceAccess(user.id!),
   ]);
 
   return (
-    <AppShell variant="student" userName={user.name ?? user.email ?? ""} userSubtitle={user.email ?? undefined} unreadUpdates={unreadUpdates}>
+    <AppShell
+      variant="student"
+      userName={user.name ?? user.email ?? ""}
+      userSubtitle={user.email ?? undefined}
+      unreadUpdates={unreadUpdates}
+      showAttendanceTab={showAttendanceTab}
+    >
       <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">

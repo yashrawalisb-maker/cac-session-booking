@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { isPast } from "@/lib/time";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
+import { hasAttendanceAccess } from "@/lib/attendance";
 import { AppShell } from "@/components/app-shell";
 import { SessionListFiltered, type FilterableSession } from "@/components/session-list-filtered";
 import { computeSessionStatus } from "@/lib/sessionStatus";
@@ -47,13 +48,14 @@ export default async function EventDetailPage({
   });
   if (!allotment) notFound();
 
-  const [sessions, bookings, unreadUpdates] = await Promise.all([
+  const [sessions, bookings, unreadUpdates, showAttendanceTab] = await Promise.all([
     prisma.session.findMany({ where: { eventId }, orderBy: { startsAt: "asc" } }),
     prisma.booking.findMany({
       where: { userId: user.id!, eventId, status: "confirmed" },
       select: { sessionId: true, bookingType: true },
     }),
     hasUnreadAnnouncements(user.id!),
+    hasAttendanceAccess(user.id!),
   ]);
 
   const bookingBySession = new Map(bookings.map((b) => [b.sessionId, b.bookingType]));
@@ -86,7 +88,13 @@ export default async function EventDetailPage({
   });
 
   return (
-    <AppShell variant="student" userName={user.name ?? user.email ?? ""} userSubtitle={user.email ?? undefined} unreadUpdates={unreadUpdates}>
+    <AppShell
+      variant="student"
+      userName={user.name ?? user.email ?? ""}
+      userSubtitle={user.email ?? undefined}
+      unreadUpdates={unreadUpdates}
+      showAttendanceTab={showAttendanceTab}
+    >
       <div className="flex flex-col gap-6">
         <div>
           <Link

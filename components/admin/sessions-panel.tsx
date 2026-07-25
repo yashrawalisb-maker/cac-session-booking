@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SessionFormDialog } from "@/components/admin/session-form-dialog";
+import { AttendanceTrackersDialog, type TrackerGrant } from "@/components/admin/attendance-trackers-dialog";
 import { createSession, updateSession, cancelSession } from "@/app/admin/events/[eventId]/actions";
 import { clubShort } from "@/lib/clubs";
 
@@ -45,16 +46,35 @@ export type SessionRow = {
   whoShouldAttend: string | null;
 };
 
-export function SessionsPanel({ eventId, sessions }: { eventId: string; sessions: SessionRow[] }) {
+export function SessionsPanel({
+  eventId,
+  sessions,
+  attendanceGrantsBySession,
+  allUsers,
+}: {
+  eventId: string;
+  sessions: SessionRow[];
+  attendanceGrantsBySession: Record<string, TrackerGrant[]>;
+  allUsers: { id: string; name: string; isbEmail: string }[];
+}) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-medium">Sessions</h2>
-        <SessionFormDialog
-          action={createSession.bind(null, eventId)}
-          title="Add session"
-          trigger={<Button size="sm">Add session</Button>}
-        />
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            render={<a href={`/admin/events/${eventId}/attendance/export`} />}
+          >
+            Export attendance CSV
+          </Button>
+          <SessionFormDialog
+            action={createSession.bind(null, eventId)}
+            title="Add session"
+            trigger={<Button size="sm">Add session</Button>}
+          />
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-border">
@@ -132,6 +152,16 @@ export function SessionsPanel({ eventId, sessions }: { eventId: string; sessions
                         whoShouldAttend: s.whoShouldAttend ?? "",
                       }}
                     />
+                    <AttendanceTrackersDialog
+                      eventId={eventId}
+                      sessionId={s.id}
+                      sessionTitle={s.title}
+                      grants={attendanceGrantsBySession[s.id] ?? []}
+                      users={allUsers}
+                    />
+                    <Button size="sm" variant="outline" render={<a href={`/attendance/${s.id}`} />}>
+                      Mark attendance
+                    </Button>
                     {s.status !== "cancelled" && (
                       <form action={cancelSession.bind(null, eventId, s.id)}>
                         <Button size="sm" variant="destructive" type="submit">

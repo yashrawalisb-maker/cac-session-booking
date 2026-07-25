@@ -39,7 +39,8 @@ export const authConfig: NextAuthConfig = {
         pathname.startsWith("/dashboard") ||
         pathname.startsWith("/events") ||
         pathname.startsWith("/my-bookings") ||
-        pathname.startsWith("/updates")
+        pathname.startsWith("/updates") ||
+        pathname.startsWith("/attendance")
       ) {
         return isLoggedIn;
       }

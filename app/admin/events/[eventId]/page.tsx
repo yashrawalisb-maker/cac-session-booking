@@ -18,7 +18,7 @@ export default async function AdminEventDetailPage({
   const event = await prisma.event.findUnique({ where: { id: eventId } });
   if (!event) notFound();
 
-  const [sessions, allotments, bookings, allUsers] = await Promise.all([
+  const [sessions, allotments, bookings, allUsers, attendanceGrants] = await Promise.all([
     prisma.session.findMany({ where: { eventId }, orderBy: { startsAt: "asc" } }),
     prisma.eventTicketAllotment.findMany({ where: { eventId }, include: { user: true } }),
     prisma.booking.findMany({
@@ -27,7 +27,25 @@ export default async function AdminEventDetailPage({
       orderBy: { bookedAt: "desc" },
     }),
     prisma.user.findMany({ where: { isAdmin: false }, orderBy: { name: "asc" } }),
+    prisma.sessionAttendanceGrant.findMany({
+      where: { session: { eventId } },
+      include: { user: true },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
+
+  const attendanceGrantsBySession: Record<
+    string,
+    { id: string; userId: string; name: string; isbEmail: string }[]
+  > = {};
+  for (const g of attendanceGrants) {
+    (attendanceGrantsBySession[g.sessionId] ??= []).push({
+      id: g.id,
+      userId: g.userId,
+      name: g.user.name,
+      isbEmail: g.user.isbEmail,
+    });
+  }
 
   const allotmentByUser = new Map(allotments.map((a) => [a.userId, a]));
   const ticketRows = allUsers.map((u) => {
@@ -59,7 +77,12 @@ export default async function AdminEventDetailPage({
         />
       </div>
 
-      <SessionsPanel eventId={event.id} sessions={sessions} />
+      <SessionsPanel
+        eventId={event.id}
+        sessions={sessions}
+        attendanceGrantsBySession={attendanceGrantsBySession}
+        allUsers={allUsers.map((u) => ({ id: u.id, name: u.name, isbEmail: u.isbEmail }))}
+      />
 
       <TicketsPanel eventId={event.id} rows={ticketRows} />
 

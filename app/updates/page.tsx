@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { istDayWindow, now } from "@/lib/time";
 import { visibleAnnouncementsWhere } from "@/lib/announcements";
+import { hasAttendanceAccess } from "@/lib/attendance";
 import { clubShort } from "@/lib/clubs";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +34,7 @@ export default async function UpdatesPage() {
   });
 
   const { start, end } = istDayWindow();
-  const [announcements, todaySessions] = await Promise.all([
+  const [announcements, todaySessions, showAttendanceTab] = await Promise.all([
     prisma.announcement.findMany({
       where: visibleAnnouncementsWhere(user.id!),
       orderBy: { createdAt: "desc" },
@@ -47,6 +48,7 @@ export default async function UpdatesPage() {
       },
       orderBy: { startsAt: "asc" },
     }),
+    hasAttendanceAccess(user.id!),
   ]);
 
   const current = now();
@@ -57,6 +59,7 @@ export default async function UpdatesPage() {
       userName={user.name ?? user.email ?? ""}
       userSubtitle={user.email ?? undefined}
       unreadUpdates={false}
+      showAttendanceTab={showAttendanceTab}
     >
       <div className="flex flex-col gap-8">
         <div>

@@ -420,3 +420,35 @@ export async function resetAllBookings(eventId: string): Promise<ActionState> {
     message: `Removed all ${removed} booking(s) for this event. Every ticket is now unused.`,
   };
 }
+
+// --- Attendance trackers ---
+
+/** Grants a roster member permission to mark attendance for one session (no admin rights). */
+export async function grantAttendanceAccess(
+  eventId: string,
+  sessionId: string,
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const admin = await requireAdmin();
+  const userId = String(formData.get("userId") ?? "");
+  if (!userId) return { error: "Select a person to grant access to." };
+
+  const existing = await prisma.sessionAttendanceGrant.findUnique({
+    where: { sessionId_userId: { sessionId, userId } },
+  });
+  if (existing) return { error: "That person already has attendance access for this session." };
+
+  await prisma.sessionAttendanceGrant.create({
+    data: { sessionId, userId, grantedById: admin.id! },
+  });
+
+  revalidateEvent(eventId);
+  return { success: true };
+}
+
+export async function revokeAttendanceAccess(eventId: string, grantId: string): Promise<void> {
+  await requireAdmin();
+  await prisma.sessionAttendanceGrant.delete({ where: { id: grantId } });
+  revalidateEvent(eventId);
+}

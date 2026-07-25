@@ -8,6 +8,7 @@ import { computeSessionStatus } from "@/lib/sessionStatus";
 import { normalizeImageUrl } from "@/lib/imageUrl";
 import { clubLabel } from "@/lib/clubs";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
+import { hasAttendanceAccess } from "@/lib/attendance";
 import { AppShell } from "@/components/app-shell";
 import { SessionBookPanel } from "@/components/session-book-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -78,12 +79,13 @@ export default async function SessionDetailPage({
   });
   if (!allotment) notFound();
 
-  const [myBooking, unreadUpdates] = await Promise.all([
+  const [myBooking, unreadUpdates, showAttendanceTab] = await Promise.all([
     prisma.booking.findUnique({
       where: { userId_sessionId: { userId: user.id!, sessionId } },
       select: { bookingType: true, status: true },
     }),
     hasUnreadAnnouncements(user.id!),
+    hasAttendanceAccess(user.id!),
   ]);
 
   const deadlinePassed = isPast(event.bookingDeadline);
@@ -107,7 +109,13 @@ export default async function SessionDetailPage({
   const whoShouldAttend = session.whoShouldAttend?.trim();
 
   return (
-    <AppShell variant="student" userName={user.name ?? user.email ?? ""} userSubtitle={user.email ?? undefined} unreadUpdates={unreadUpdates}>
+    <AppShell
+      variant="student"
+      userName={user.name ?? user.email ?? ""}
+      userSubtitle={user.email ?? undefined}
+      unreadUpdates={unreadUpdates}
+      showAttendanceTab={showAttendanceTab}
+    >
       <div className="flex flex-col gap-6">
         <Link
           href={`/events/${eventId}`}
