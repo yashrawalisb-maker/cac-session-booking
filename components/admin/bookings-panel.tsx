@@ -27,18 +27,25 @@ export function BookingsPanel({
   bookings,
   users,
   sessions,
+  cohortSplitCounts,
 }: {
   eventId: string;
   bookings: BookingRow[];
   users: { id: string; name: string; isbEmail: string }[];
-  sessions: { id: string; title: string; dayLabel: string }[];
+  sessions: { id: string; title: string; dayLabel: string; capacity: number; bookedCount: number }[];
+  cohortSplitCounts: Record<string, number>;
 }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-medium">Bookings</h2>
         <div className="flex gap-2">
-          <ManualBookingDialog eventId={eventId} users={users} sessions={sessions} />
+          <ManualBookingDialog
+            eventId={eventId}
+            users={users}
+            sessions={sessions}
+            cohortSplitCounts={cohortSplitCounts}
+          />
           <Button variant="outline" render={<a href={`/admin/events/${eventId}/bookings/export`} />}>
             Export CSV
           </Button>

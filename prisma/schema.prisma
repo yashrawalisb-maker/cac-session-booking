@@ -41,7 +41,8 @@ model User {
   pgpId      String   @unique @map("pgp_id")
   isAdmin    Boolean  @default(false) @map("is_admin")
   section    String? // cohort section, e.g. "G" — reference only, not used in booking logic
-  studyGroup String?  @map("study_group") // e.g. "G12" — reference only
+  studyGroup String?  @map("study_group") // e.g. "G12" — reference only, unrelated to cohortSplit below
+  cohortSplit String? @map("cohort_split") // e.g. "G1"/"G2" — mandatory-attendance half-section split, drives group booking override
   createdAt  DateTime @default(now()) @map("created_at")
   announcementsSeenAt DateTime? @map("announcements_seen_at") // drives the unread bell dot
 

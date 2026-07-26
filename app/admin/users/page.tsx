@@ -28,6 +28,7 @@ export default async function AdminUsersPage() {
               <TableHead>PGP ID</TableHead>
               <TableHead>Section</TableHead>
               <TableHead>Study group</TableHead>
+              <TableHead>Cohort split</TableHead>
               <TableHead>Role</TableHead>
             </TableRow>
           </TableHeader>
@@ -39,6 +40,7 @@ export default async function AdminUsersPage() {
                 <TableCell>{u.pgpId}</TableCell>
                 <TableCell>{u.section ?? "—"}</TableCell>
                 <TableCell>{u.studyGroup ?? "—"}</TableCell>
+                <TableCell>{u.cohortSplit ?? "—"}</TableCell>
                 <TableCell>
                   {u.isAdmin ? <Badge>Admin</Badge> : <Badge variant="outline">User</Badge>}
                 </TableCell>

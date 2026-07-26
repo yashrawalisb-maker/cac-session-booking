@@ -8,8 +8,19 @@ import { prisma } from "@/lib/prisma";
 import { bookSessionForUser, cancelBooking, BookingError } from "@/lib/booking";
 import { parseCsvWithHeader } from "@/lib/csv";
 import { isClubValue } from "@/lib/clubs";
+import { isCohortSplitValue } from "@/lib/cohortSplits";
 
 export type ActionState = { error?: string; success?: boolean; message?: string } | undefined;
+
+export type GroupBookingResultRow = { name: string; pgpId: string; outcome: string };
+export type GroupBookingActionState =
+  | {
+      error?: string;
+      success?: boolean;
+      summary?: { total: number; booked: number; skipped: number };
+      results?: GroupBookingResultRow[];
+    }
+  | undefined;
 
 function revalidateEvent(eventId: string) {
   revalidatePath(`/admin/events/${eventId}`);
@@ -330,6 +341,59 @@ export async function manualBookingOverride(
 
   revalidateEvent(eventId);
   return { success: true };
+}
+
+/**
+ * Books every non-admin student in the selected cohort split(s) into one session. Each
+ * student runs through the exact same bookSessionForUser() as the single-user override — its
+ * own transaction, its own pass/fail — so one student's failure (already booked, no tickets,
+ * time conflict, full) never blocks the rest of the group.
+ */
+export async function manualGroupBookingOverride(
+  eventId: string,
+  _prevState: GroupBookingActionState,
+  formData: FormData
+): Promise<GroupBookingActionState> {
+  const admin = await requireAdmin();
+  const cohortSplits = formData.getAll("cohortSplits").map(String).filter(isCohortSplitValue);
+  const sessionId = String(formData.get("sessionId") ?? "");
+  const note = String(formData.get("note") ?? "").trim();
+  const bypassTicketCheck = formData.get("bypassTicketCheck") === "on";
+
+  if (cohortSplits.length === 0 || !sessionId || !note) {
+    return { error: "At least one group, a session, and a reason note are required." };
+  }
+
+  const students = await prisma.user.findMany({
+    where: { isAdmin: false, cohortSplit: { in: cohortSplits } },
+    orderBy: { name: "asc" },
+  });
+
+  const results: GroupBookingResultRow[] = [];
+  let booked = 0;
+  for (const student of students) {
+    try {
+      await bookSessionForUser(prisma, {
+        userId: student.id,
+        eventId,
+        sessionId,
+        bookingType: "self_selected",
+        adminOverride: { adminUserId: admin.id!, note, bypassTicketCheck, bypassDeadline: true },
+      });
+      results.push({ name: student.name, pgpId: student.pgpId, outcome: "Booked" });
+      booked++;
+    } catch (e) {
+      const message = e instanceof BookingError ? e.message : "Unexpected error";
+      results.push({ name: student.name, pgpId: student.pgpId, outcome: message });
+    }
+  }
+
+  revalidateEvent(eventId);
+  return {
+    success: true,
+    summary: { total: students.length, booked, skipped: students.length - booked },
+    results,
+  };
 }
 
 export async function adminCancelBooking(

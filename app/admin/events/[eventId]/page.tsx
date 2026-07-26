@@ -47,6 +47,11 @@ export default async function AdminEventDetailPage({
     });
   }
 
+  const cohortSplitCounts: Record<string, number> = {};
+  for (const u of allUsers) {
+    if (u.cohortSplit) cohortSplitCounts[u.cohortSplit] = (cohortSplitCounts[u.cohortSplit] ?? 0) + 1;
+  }
+
   const allotmentByUser = new Map(allotments.map((a) => [a.userId, a]));
   const ticketRows = allUsers.map((u) => {
     const a = allotmentByUser.get(u.id);
@@ -98,7 +103,14 @@ export default async function AdminEventDetailPage({
           adminNote: b.adminNote,
         }))}
         users={allUsers.map((u) => ({ id: u.id, name: u.name, isbEmail: u.isbEmail }))}
-        sessions={sessions.map((s) => ({ id: s.id, title: s.title, dayLabel: s.dayLabel }))}
+        sessions={sessions.map((s) => ({
+          id: s.id,
+          title: s.title,
+          dayLabel: s.dayLabel,
+          capacity: s.capacity,
+          bookedCount: s.bookedCount,
+        }))}
+        cohortSplitCounts={cohortSplitCounts}
       />
 
       <AutoAllocateButton eventId={event.id} />
