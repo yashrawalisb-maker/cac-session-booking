@@ -5,10 +5,12 @@ import { redirect } from "next/navigation";
 import { Prisma } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
-import { bookSessionForUser, cancelBooking, BookingError } from "@/lib/booking";
+import { bookSessionForUser, attemptBooking, cancelBooking, BookingError } from "@/lib/booking";
+import { sendAcknowledgmentEmail } from "@/lib/email";
 import { parseCsvWithHeader } from "@/lib/csv";
 import { isClubValue } from "@/lib/clubs";
 import { isCohortSplitValue } from "@/lib/cohortSplits";
+import { parseIstDateTime } from "@/lib/time";
 
 export type ActionState = { error?: string; success?: boolean; message?: string } | undefined;
 
@@ -57,7 +59,7 @@ export async function updateEvent(
       description: description || null,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
-      bookingDeadline: new Date(bookingDeadline),
+      bookingDeadline: parseIstDateTime(bookingDeadline),
       status,
       overlapCheckEnabled,
     },
@@ -125,7 +127,9 @@ function parseSessionForm(formData: FormData) {
   if (!title || !dayLabel || !startsAt || !endsAt || !venueName || !capacity) {
     return { error: "Title, day, start/end time, venue, and capacity are required." } as const;
   }
-  if (new Date(endsAt) <= new Date(startsAt)) {
+  const startsAtDate = parseIstDateTime(startsAt);
+  const endsAtDate = parseIstDateTime(endsAt);
+  if (endsAtDate <= startsAtDate) {
     return { error: "End time must be after start time." } as const;
   }
   if (club && !isClubValue(club)) {
@@ -137,8 +141,8 @@ function parseSessionForm(formData: FormData) {
       title,
       description: description || null,
       dayLabel,
-      startsAt: new Date(startsAt),
-      endsAt: new Date(endsAt),
+      startsAt: startsAtDate,
+      endsAt: endsAtDate,
       venueName,
       venueLocation: venueLocation || null,
       capacity,
@@ -236,24 +240,59 @@ export async function setDefaultTickets(
   return { success: true, message: `Set ${tickets} ticket(s) for ${users.length} user(s).` };
 }
 
-export async function setUserTickets(
+/**
+ * Save per-user ticket edits from the allotment table in one submit. Rows arrive as
+ * `tickets:<userId>` fields; we group user IDs by their (few) distinct values so the whole
+ * roster is written with a handful of bulk statements — never one update per user, which would
+ * blow the interactive-transaction budget on a ~400-person roster.
+ */
+export async function setTicketsBulk(
   eventId: string,
-  userId: string,
   _prevState: ActionState,
   formData: FormData
 ): Promise<ActionState> {
   await requireAdmin();
-  const tickets = Number(formData.get("tickets") ?? 0);
-  if (!Number.isFinite(tickets) || tickets < 0) return { error: "Enter a valid ticket count." };
 
-  await prisma.eventTicketAllotment.upsert({
-    where: { eventId_userId: { eventId, userId } },
-    update: { ticketsAllotted: tickets },
-    create: { eventId, userId, ticketsAllotted: tickets },
+  const byValue = new Map<number, string[]>();
+  for (const [key, raw] of formData.entries()) {
+    if (!key.startsWith("tickets:")) continue;
+    const tickets = Number(raw);
+    if (!Number.isInteger(tickets) || tickets < 0) {
+      return { error: "Every ticket count must be a whole number of 0 or more." };
+    }
+    const userId = key.slice("tickets:".length);
+    let arr = byValue.get(tickets);
+    if (!arr) byValue.set(tickets, (arr = []));
+    arr.push(userId);
+  }
+  if (byValue.size === 0) return { error: "No changes to save." };
+
+  const existing = await prisma.eventTicketAllotment.findMany({
+    where: { eventId },
+    select: { userId: true },
   });
+  const existingIds = new Set(existing.map((a) => a.userId));
+
+  let saved = 0;
+  for (const [tickets, userIds] of byValue) {
+    const toUpdate = userIds.filter((id) => existingIds.has(id));
+    const toCreate = userIds.filter((id) => !existingIds.has(id));
+    if (toUpdate.length > 0) {
+      await prisma.eventTicketAllotment.updateMany({
+        where: { eventId, userId: { in: toUpdate } },
+        data: { ticketsAllotted: tickets },
+      });
+    }
+    if (toCreate.length > 0) {
+      await prisma.eventTicketAllotment.createMany({
+        data: toCreate.map((userId) => ({ eventId, userId, ticketsAllotted: tickets })),
+      });
+    }
+    saved += userIds.length;
+  }
 
   revalidateEvent(eventId);
-  return { success: true };
+  return { success: true, message: `Saved ticket allotments for ${saved} user(s).` };
 }
 
 export async function importAllotmentsCsv(
@@ -369,24 +408,34 @@ export async function manualGroupBookingOverride(
     orderBy: { name: "asc" },
   });
 
+  // Two phases so a whole cohort books quickly. Phase 1 commits every booking (DB-only, each in
+  // its own transaction — one student's failure never blocks the rest, same as the single-user
+  // override). Phase 2 sends the acknowledgment emails concurrently AFTER, so N serial provider
+  // round-trips don't stack up inside the request.
   const results: GroupBookingResultRow[] = [];
-  let booked = 0;
+  const bookedIds: string[] = [];
   for (const student of students) {
     try {
-      await bookSessionForUser(prisma, {
-        userId: student.id,
-        eventId,
-        sessionId,
-        bookingType: "self_selected",
-        adminOverride: { adminUserId: admin.id!, note, bypassTicketCheck, bypassDeadline: true },
-      });
+      const booking = await prisma.$transaction((tx) =>
+        attemptBooking(tx, {
+          userId: student.id,
+          eventId,
+          sessionId,
+          bookingType: "self_selected",
+          adminOverride: { adminUserId: admin.id!, note, bypassTicketCheck, bypassDeadline: true },
+        })
+      );
+      bookedIds.push(booking.id);
       results.push({ name: student.name, pgpId: student.pgpId, outcome: "Booked" });
-      booked++;
     } catch (e) {
       const message = e instanceof BookingError ? e.message : "Unexpected error";
       results.push({ name: student.name, pgpId: student.pgpId, outcome: message });
     }
   }
+  const booked = bookedIds.length;
+
+  // sendAcknowledgmentEmail never throws (it logs failures), so allSettled is belt-and-braces.
+  await Promise.allSettled(bookedIds.map((id) => sendAcknowledgmentEmail(id)));
 
   revalidateEvent(eventId);
   return {

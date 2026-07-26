@@ -7,13 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { updateEvent, type ActionState } from "@/app/admin/events/[eventId]/actions";
+import { toIstDateTimeLocal } from "@/lib/time";
 
 function toDateInputValue(d: Date) {
   return d.toISOString().slice(0, 10);
-}
-function toLocalInputValue(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export function EventDetailsForm({
@@ -74,7 +71,7 @@ export function EventDetailsForm({
           name="bookingDeadline"
           type="datetime-local"
           required
-          defaultValue={toLocalInputValue(defaults.bookingDeadline)}
+          defaultValue={toIstDateTimeLocal(defaults.bookingDeadline)}
         />
       </div>
       <div className="flex items-center gap-2 self-end pb-2">

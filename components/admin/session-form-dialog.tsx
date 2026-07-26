@@ -15,11 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import type { ActionState } from "@/app/admin/events/[eventId]/actions";
 import { CLUBS } from "@/lib/clubs";
-
-function toLocalInputValue(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+import { toIstDateTimeLocal } from "@/lib/time";
 
 export type SessionDefaults = {
   title: string;
@@ -117,7 +113,7 @@ export function SessionFormDialog({
                 name="startsAt"
                 type="datetime-local"
                 required
-                defaultValue={defaults ? toLocalInputValue(defaults.startsAt) : undefined}
+                defaultValue={defaults ? toIstDateTimeLocal(defaults.startsAt) : undefined}
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -127,7 +123,7 @@ export function SessionFormDialog({
                 name="endsAt"
                 type="datetime-local"
                 required
-                defaultValue={defaults ? toLocalInputValue(defaults.endsAt) : undefined}
+                defaultValue={defaults ? toIstDateTimeLocal(defaults.endsAt) : undefined}
               />
             </div>
             <div className="flex flex-col gap-1.5">

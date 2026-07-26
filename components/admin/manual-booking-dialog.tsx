@@ -73,7 +73,6 @@ function SingleUserForm({
   );
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (state?.success) onDone();
   }, [state, onDone]);
 

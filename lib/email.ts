@@ -52,6 +52,8 @@ export async function sendAcknowledgmentEmail(bookingId: string) {
   }
 
   try {
+    // Hard timeout: a hung provider must never stall the booking request indefinitely
+    // (a whole cohort's group booking waits on these). Fail fast and log instead.
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -64,6 +66,7 @@ export async function sendAcknowledgmentEmail(bookingId: string) {
         subject,
         text: body,
       }),
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!res.ok) {
