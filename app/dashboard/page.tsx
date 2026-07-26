@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CalendarDays, ArrowRight, Ticket } from "lucide-react";
 import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
@@ -29,6 +30,8 @@ const UPCOMING_FORMATTER = new Intl.DateTimeFormat("en-IN", {
 
 export default async function DashboardPage() {
   const user = await requireUser();
+  // Admins have no student view — keep them on the admin side even via a stale link/bookmark.
+  if (user.isAdmin) redirect("/admin");
   const firstName = (user.name ?? "there").trim().split(/\s+/)[0];
 
   const [allotments, upcoming, unreadUpdates, showAttendanceTab] = await Promise.all([

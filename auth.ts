@@ -68,8 +68,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   providers,
   callbacks: {
-    // jwt/session/authorized are inherited from authConfig (shared with the edge middleware).
-    // signIn needs Prisma, so it can only live here in the Node-runtime config.
+    // session/authorized are inherited from authConfig (shared with the edge middleware).
+    // signIn and the enriching jwt need Prisma, so they live here in the Node-runtime config.
     ...authConfig.callbacks,
     async signIn({ user, account, profile }) {
       if (account?.provider === "microsoft-entra-id") {
@@ -87,6 +87,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         user.name = roster.name;
       }
       return true;
+    },
+    // Overrides the edge passthrough jwt (auth.config.ts) in the Node runtime. On sign-in we
+    // resolve id/isAdmin straight from the roster by email — reliable for BOTH providers. The
+    // Microsoft provider's `user` has no isAdmin, and mutating it in signIn doesn't dependably
+    // reach this callback, so we never trust that; we look it up. The result is baked into the
+    // JWT cookie at sign-in, which the edge middleware then reads via the shared session callback.
+    async jwt({ token, user, profile }) {
+      if (user) {
+        const email =
+          (user.email as string | undefined) ??
+          (profile?.email as string | undefined) ??
+          (profile?.preferred_username as string | undefined);
+
+        const roster = email
+          ? await prisma.user.findFirst({
+              where: { isbEmail: { equals: String(email), mode: "insensitive" } },
+              select: { id: true, isAdmin: true },
+            })
+          : null;
+
+        token.userId = roster?.id ?? (user.id as string | undefined);
+        token.isAdmin = roster?.isAdmin ?? Boolean((user as { isAdmin?: boolean }).isAdmin);
+      }
+      return token;
     },
   },
 });
