@@ -42,6 +42,10 @@ export async function runAutoAllocation(prisma: PrismaClient, eventId: string): 
     usersPartiallyAllotted: [],
   };
 
+  // Acknowledgment emails are fanned out AFTER all bookings commit (see below), not awaited one
+  // at a time inside the loop — otherwise a full-roster run stacks up hundreds of serial sends.
+  const createdBookingIds: string[] = [];
+
   for (const allotment of allotments) {
     const remaining = allotment.ticketsAllotted - allotment.ticketsUsed;
     if (remaining <= 0) continue;
@@ -70,7 +74,7 @@ export async function runAutoAllocation(prisma: PrismaClient, eventId: string): 
         );
         booked++;
         summary.bookingsCreated++;
-        await sendAcknowledgmentEmail(booking.id);
+        createdBookingIds.push(booking.id);
       } catch (e) {
         if (e instanceof BookingError) continue; // filled/conflicted since candidate list was built
         throw e;
@@ -87,6 +91,9 @@ export async function runAutoAllocation(prisma: PrismaClient, eventId: string): 
       });
     }
   }
+
+  // sendAcknowledgmentEmail never throws (it logs failures), so allSettled is belt-and-braces.
+  await Promise.allSettled(createdBookingIds.map((id) => sendAcknowledgmentEmail(id)));
 
   void event; // referenced for the findUniqueOrThrow existence check above
   return summary;

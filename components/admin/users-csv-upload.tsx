@@ -15,7 +15,7 @@ export function UsersCsvUpload() {
       <form action={formAction} className="flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium" htmlFor="file">
-            Import roster CSV (name, isb_email, pgp_id)
+            Import roster CSV (name, isb_email, pgp_id; optional: section, study_group, cohort_split)
           </label>
           <input id="file" name="file" type="file" accept=".csv" className="text-sm" />
         </div>

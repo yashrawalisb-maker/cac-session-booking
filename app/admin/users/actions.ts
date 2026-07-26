@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { parseCsvWithHeader } from "@/lib/csv";
+import { isCohortSplitValue } from "@/lib/cohortSplits";
 
 export type ActionState = { error?: string; success?: boolean; message?: string } | undefined;
 
@@ -48,10 +49,15 @@ export async function importUsersCsv(_prevState: ActionState, formData: FormData
       const pgpId = record.pgp_id?.trim();
       const section = record.section?.trim() || undefined;
       const studyGroup = record.study_group?.trim() || undefined;
+      const cohortSplitRaw = record.cohort_split?.trim();
+      const cohortSplit = cohortSplitRaw || undefined;
       if (!name) throw new Error(`Row ${row}: missing name`);
       if (!isbEmail) throw new Error(`Row ${row}: missing isb_email`);
       if (!pgpId) throw new Error(`Row ${row}: missing pgp_id`);
-      return { name, isbEmail, pgpId, section, studyGroup };
+      if (cohortSplit && !isCohortSplitValue(cohortSplit)) {
+        throw new Error(`Row ${row}: invalid cohort_split "${cohortSplit}" (expected e.g. G1, G2)`);
+      }
+      return { name, isbEmail, pgpId, section, studyGroup, cohortSplit };
     }
   );
   if (headerError) return { error: headerError };
@@ -68,6 +74,7 @@ export async function importUsersCsv(_prevState: ActionState, formData: FormData
         pgpId: string;
         section: string | undefined;
         studyGroup: string | undefined;
+        cohortSplit: string | undefined;
       };
     } => !!r.data
   );
@@ -115,6 +122,7 @@ export async function importUsersCsv(_prevState: ActionState, formData: FormData
         pgpId: v.data.pgpId,
         section: v.data.section,
         studyGroup: v.data.studyGroup,
+        cohortSplit: v.data.cohortSplit,
       },
     });
     existingEmails.add(v.data.isbEmail.toLowerCase());

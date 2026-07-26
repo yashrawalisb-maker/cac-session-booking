@@ -73,7 +73,14 @@ export async function attemptBooking(tx: TxClient, params: AttemptBookingParams)
 
   if (session.status !== "open") throw new BookingError("SESSION_NOT_OPEN");
 
-  if (!adminOverride?.bypassDeadline && event.bookingDeadline.getTime() < Date.now()) {
+  // Auto-allocation is by definition a post-deadline sweep (PRD §8.4 "Auto-allotment logic
+  // (post-deadline)"), so it must not be blocked by the deadline the way self-service booking is.
+  const isAutoAllotment = bookingType === "auto_allotted";
+  if (
+    !adminOverride?.bypassDeadline &&
+    !isAutoAllotment &&
+    event.bookingDeadline.getTime() < Date.now()
+  ) {
     throw new BookingError("DEADLINE_PASSED");
   }
 

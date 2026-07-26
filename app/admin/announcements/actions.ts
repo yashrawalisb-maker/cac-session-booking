@@ -49,6 +49,11 @@ export async function updateAnnouncement(
   const parsed = parseAnnouncementForm(formData);
   if ("error" in parsed) return { error: parsed.error };
 
+  if (parsed.data.eventId) {
+    const event = await prisma.event.findUnique({ where: { id: parsed.data.eventId } });
+    if (!event) return { error: "Selected event no longer exists." };
+  }
+
   await prisma.announcement.update({ where: { id: announcementId }, data: parsed.data });
   revalidateAnnouncements();
   return { success: true };
