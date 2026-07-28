@@ -11,6 +11,7 @@ import { parseCsvWithHeader } from "@/lib/csv";
 import { isClubValue } from "@/lib/clubs";
 import { isCohortSplitValue } from "@/lib/cohortSplits";
 import { parseIstDateTime } from "@/lib/time";
+import { parseSpeakers } from "@/lib/speakers";
 
 export type ActionState = { error?: string; success?: boolean; message?: string } | undefined;
 
@@ -104,15 +105,12 @@ function parseSessionForm(formData: FormData) {
   const venueName = String(formData.get("venueName") ?? "").trim();
   const venueLocation = String(formData.get("venueLocation") ?? "").trim();
   const capacity = Number(formData.get("capacity") ?? 0);
-  const speakerProfileId = String(formData.get("speakerProfileId") ?? "").trim();
-  const speakerDescription = String(formData.get("speakerDescription") ?? "").trim();
 
-  // Detail-page enrichment — all optional.
-  const speakerName = String(formData.get("speakerName") ?? "").trim();
-  const speakerRole = String(formData.get("speakerRole") ?? "").trim();
-  const speakerPhotoUrl = String(formData.get("speakerPhotoUrl") ?? "").trim();
-  const speakerBio = String(formData.get("speakerBio") ?? "").trim();
-  const speakerProfileUrl = String(formData.get("speakerProfileUrl") ?? "").trim();
+  // Multi-speaker: the form posts a JSON array; the flat speaker* columns below are kept mirrored
+  // to the first speaker so legacy readers (booking email, un-migrated sessions) still work.
+  const speakers = parseSpeakers(formData.get("speakers"));
+  const primary = speakers[0] ?? null;
+
   const venueDescription = String(formData.get("venueDescription") ?? "").trim();
   const venuePhotoUrl = String(formData.get("venuePhotoUrl") ?? "").trim();
   const venueMapUrl = String(formData.get("venueMapUrl") ?? "").trim();
@@ -146,13 +144,13 @@ function parseSessionForm(formData: FormData) {
       venueName,
       venueLocation: venueLocation || null,
       capacity,
-      speakerProfileId: speakerProfileId || null,
-      speakerDescription: speakerDescription || null,
-      speakerName: speakerName || null,
-      speakerRole: speakerRole || null,
-      speakerPhotoUrl: speakerPhotoUrl || null,
-      speakerBio: speakerBio || null,
-      speakerProfileUrl: speakerProfileUrl || null,
+      speakers,
+      speakerName: primary?.name ?? null,
+      speakerRole: primary?.role ?? null,
+      speakerPhotoUrl: primary?.photoUrl ?? null,
+      speakerBio: primary?.bio ?? null,
+      speakerProfileUrl: primary?.profileUrl ?? null,
+      speakerDescription: primary ? [primary.name, primary.role].filter(Boolean).join(" — ") : null,
       venueDescription: venueDescription || null,
       venuePhotoUrl: venuePhotoUrl || null,
       venueMapUrl: venueMapUrl || null,

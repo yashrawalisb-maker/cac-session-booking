@@ -16,6 +16,7 @@ import {
 import type { ActionState } from "@/app/admin/events/[eventId]/actions";
 import { CLUBS } from "@/lib/clubs";
 import { toIstDateTimeLocal } from "@/lib/time";
+import type { SessionSpeaker } from "@/lib/speakers";
 
 export type SessionDefaults = {
   title: string;
@@ -26,13 +27,7 @@ export type SessionDefaults = {
   venueName: string;
   venueLocation: string;
   capacity: number;
-  speakerProfileId: string;
-  speakerDescription: string;
-  speakerName: string;
-  speakerRole: string;
-  speakerPhotoUrl: string;
-  speakerBio: string;
-  speakerProfileUrl: string;
+  speakers: SessionSpeaker[];
   venueDescription: string;
   venuePhotoUrl: string;
   venueMapUrl: string;
@@ -43,6 +38,22 @@ export type SessionDefaults = {
   agenda: string;
   whoShouldAttend: string;
 };
+
+type SpeakerDraft = { name: string; role: string; photoUrl: string; bio: string; profileUrl: string };
+
+function emptySpeaker(): SpeakerDraft {
+  return { name: "", role: "", photoUrl: "", bio: "", profileUrl: "" };
+}
+
+function toDraft(s: SessionSpeaker): SpeakerDraft {
+  return {
+    name: s.name ?? "",
+    role: s.role ?? "",
+    photoUrl: s.photoUrl ?? "",
+    bio: s.bio ?? "",
+    profileUrl: s.profileUrl ?? "",
+  };
+}
 
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -69,10 +80,37 @@ export function SessionFormDialog({
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, undefined);
 
+  const [speakers, setSpeakers] = useState<SpeakerDraft[]>(() =>
+    defaults?.speakers?.length ? defaults.speakers.map(toDraft) : [emptySpeaker()]
+  );
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (state?.success) setOpen(false);
   }, [state]);
+
+  function updateSpeaker(index: number, field: keyof SpeakerDraft, value: string) {
+    setSpeakers((prev) => prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)));
+  }
+  function addSpeaker() {
+    setSpeakers((prev) => [...prev, emptySpeaker()]);
+  }
+  function removeSpeaker(index: number) {
+    setSpeakers((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+  }
+
+  // Only speakers with a name are submitted; the server trims/normalizes the rest.
+  const serializedSpeakers = JSON.stringify(
+    speakers
+      .filter((s) => s.name.trim())
+      .map((s) => ({
+        name: s.name.trim(),
+        role: s.role.trim(),
+        photoUrl: s.photoUrl.trim(),
+        bio: s.bio.trim(),
+        profileUrl: s.profileUrl.trim(),
+      }))
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -175,41 +213,78 @@ export function SessionFormDialog({
             </div>
           </FormSection>
 
-          <FormSection title="Speaker">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="speakerName">Speaker name</Label>
-              <Input id="speakerName" name="speakerName" defaultValue={defaults?.speakerName} />
+          <div className="col-span-2 flex flex-col gap-3 border-t border-border pt-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Speakers
+              </h3>
+              <Button type="button" variant="outline" size="sm" onClick={addSpeaker}>
+                Add speaker
+              </Button>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="speakerRole">Speaker role / title</Label>
-              <Input id="speakerRole" name="speakerRole" placeholder="Marketing Leader & Strategist" defaultValue={defaults?.speakerRole} />
-            </div>
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <Label htmlFor="speakerPhotoUrl">Speaker photo URL</Label>
-              <Input id="speakerPhotoUrl" name="speakerPhotoUrl" type="url" placeholder="https://…" defaultValue={defaults?.speakerPhotoUrl} />
-            </div>
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <Label htmlFor="speakerBio">Speaker bio</Label>
-              <Textarea id="speakerBio" name="speakerBio" rows={3} defaultValue={defaults?.speakerBio} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="speakerProfileUrl">Full profile link</Label>
-              <Input id="speakerProfileUrl" name="speakerProfileUrl" type="url" placeholder="https://linkedin.com/…" defaultValue={defaults?.speakerProfileUrl} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="speakerProfileId">Speaker profile ID</Label>
-              <Input id="speakerProfileId" name="speakerProfileId" defaultValue={defaults?.speakerProfileId} />
-            </div>
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <Label htmlFor="speakerDescription">Speaker description (legacy, shown as fallback)</Label>
-              <Textarea
-                id="speakerDescription"
-                name="speakerDescription"
-                rows={2}
-                defaultValue={defaults?.speakerDescription}
-              />
-            </div>
-          </FormSection>
+
+            {speakers.map((sp, i) => (
+              <div key={i} className="flex flex-col gap-3 rounded-md border border-border p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Speaker {i + 1}</span>
+                  {speakers.length > 1 && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => removeSpeaker(i)}>
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`speaker-${i}-name`}>Name</Label>
+                    <Input
+                      id={`speaker-${i}-name`}
+                      value={sp.name}
+                      onChange={(e) => updateSpeaker(i, "name", e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`speaker-${i}-role`}>Role / title</Label>
+                    <Input
+                      id={`speaker-${i}-role`}
+                      placeholder="Director, Avendus"
+                      value={sp.role}
+                      onChange={(e) => updateSpeaker(i, "role", e.target.value)}
+                    />
+                  </div>
+                  <div className="col-span-2 flex flex-col gap-1.5">
+                    <Label htmlFor={`speaker-${i}-photoUrl`}>Photo URL</Label>
+                    <Input
+                      id={`speaker-${i}-photoUrl`}
+                      type="url"
+                      placeholder="https://…"
+                      value={sp.photoUrl}
+                      onChange={(e) => updateSpeaker(i, "photoUrl", e.target.value)}
+                    />
+                  </div>
+                  <div className="col-span-2 flex flex-col gap-1.5">
+                    <Label htmlFor={`speaker-${i}-bio`}>Bio</Label>
+                    <Textarea
+                      id={`speaker-${i}-bio`}
+                      rows={3}
+                      value={sp.bio}
+                      onChange={(e) => updateSpeaker(i, "bio", e.target.value)}
+                    />
+                  </div>
+                  <div className="col-span-2 flex flex-col gap-1.5">
+                    <Label htmlFor={`speaker-${i}-profileUrl`}>Full profile link</Label>
+                    <Input
+                      id={`speaker-${i}-profileUrl`}
+                      type="url"
+                      placeholder="https://linkedin.com/…"
+                      value={sp.profileUrl}
+                      onChange={(e) => updateSpeaker(i, "profileUrl", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <input type="hidden" name="speakers" value={serializedSpeakers} />
+          </div>
 
           <FormSection title="Detail page content">
             <div className="col-span-2 flex flex-col gap-1.5">

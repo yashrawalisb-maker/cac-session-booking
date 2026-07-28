@@ -7,6 +7,7 @@ import { isPast } from "@/lib/time";
 import { computeSessionStatus } from "@/lib/sessionStatus";
 import { normalizeImageUrl } from "@/lib/imageUrl";
 import { clubLabel } from "@/lib/clubs";
+import { effectiveSpeakers } from "@/lib/speakers";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { hasAttendanceAccess } from "@/lib/attendance";
 import { AppShell } from "@/components/app-shell";
@@ -99,10 +100,8 @@ export default async function SessionDetailPage({
     deadlinePassed,
   });
 
-  const speakerName = session.speakerName ?? session.speakerDescription ?? null;
-  const speakerRole = session.speakerRole;
-  const speakerBio = session.speakerBio ?? session.speakerDescription;
-  const hasSpeaker = !!(speakerName || speakerBio);
+  const speakers = effectiveSpeakers(session);
+  const hasSpeaker = speakers.length > 0;
 
   const keyTakeaways = session.keyTakeaways?.trim();
   const agenda = session.agenda?.trim();
@@ -187,41 +186,46 @@ export default async function SessionDetailPage({
               </TabsContent>
 
               <TabsContent value="speaker" className="rounded-xl border border-border bg-card p-5">
-                <h2 className="mb-3 text-base font-semibold">About the speaker</h2>
-                <div className="flex flex-col gap-4 sm:flex-row">
-                  <SpeakerAvatar
-                    name={speakerName ?? "Speaker"}
-                    photoUrl={session.speakerPhotoUrl}
-                    placeholder={!hasSpeaker}
-                    size={64}
-                  />
-                  <div className="flex flex-1 flex-col gap-1">
-                    <p className="font-semibold text-foreground">{speakerName ?? "To be announced"}</p>
-                    {speakerRole ? (
-                      <p className="text-sm text-muted-foreground">{speakerRole}</p>
-                    ) : (
-                      !hasSpeaker && (
-                        <p className="text-sm text-muted-foreground">
-                          Speaker details will be shared here soon.
-                        </p>
-                      )
-                    )}
-                    {speakerBio && (
-                      <p className="mt-2 text-sm whitespace-pre-line text-muted-foreground">{speakerBio}</p>
-                    )}
-                    {session.speakerProfileUrl && (
-                      <a
-                        href={session.speakerProfileUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-                      >
-                        View full profile
-                        <ExternalLink className="size-3.5" />
-                      </a>
-                    )}
+                <h2 className="mb-3 text-base font-semibold">
+                  About the speaker{speakers.length > 1 ? "s" : ""}
+                </h2>
+                {hasSpeaker ? (
+                  <div className="flex flex-col gap-6">
+                    {speakers.map((sp, i) => (
+                      <div key={i} className="flex flex-col gap-4 sm:flex-row">
+                        <SpeakerAvatar name={sp.name} photoUrl={sp.photoUrl} placeholder={false} size={64} />
+                        <div className="flex flex-1 flex-col gap-1">
+                          <p className="font-semibold text-foreground">{sp.name}</p>
+                          {sp.role && <p className="text-sm text-muted-foreground">{sp.role}</p>}
+                          {sp.bio && (
+                            <p className="mt-2 text-sm whitespace-pre-line text-muted-foreground">{sp.bio}</p>
+                          )}
+                          {sp.profileUrl && (
+                            <a
+                              href={sp.profileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                            >
+                              View full profile
+                              <ExternalLink className="size-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                ) : (
+                  <div className="flex flex-col gap-4 sm:flex-row">
+                    <SpeakerAvatar name="Speaker" photoUrl={null} placeholder size={64} />
+                    <div className="flex flex-1 flex-col gap-1">
+                      <p className="font-semibold text-foreground">To be announced</p>
+                      <p className="text-sm text-muted-foreground">
+                        Speaker details will be shared here soon.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="agenda" className="rounded-xl border border-border bg-card p-5">
@@ -247,35 +251,42 @@ export default async function SessionDetailPage({
           {/* Sidebar */}
           <div className="flex flex-col gap-4">
             <div className="rounded-xl border border-border bg-card p-4">
-              <h3 className="mb-3 text-sm font-semibold">Speaker profile</h3>
-              <div className="flex items-center gap-3">
-                <SpeakerAvatar
-                  name={speakerName ?? "Speaker"}
-                  photoUrl={session.speakerPhotoUrl}
-                  placeholder={!hasSpeaker}
-                  size={48}
-                />
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    {speakerName ?? "To be announced"}
-                  </p>
-                  {speakerRole ? (
-                    <p className="text-xs text-muted-foreground">{speakerRole}</p>
-                  ) : (
-                    !hasSpeaker && <p className="text-xs text-muted-foreground">Coming soon</p>
-                  )}
+              <h3 className="mb-3 text-sm font-semibold">
+                {speakers.length > 1 ? "Speakers" : "Speaker profile"}
+              </h3>
+              {hasSpeaker ? (
+                <div className="flex flex-col gap-4">
+                  {speakers.map((sp, i) => (
+                    <div key={i} className="flex flex-col gap-2">
+                      <div className="flex items-center gap-3">
+                        <SpeakerAvatar name={sp.name} photoUrl={sp.photoUrl} placeholder={false} size={48} />
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{sp.name}</p>
+                          {sp.role && <p className="text-xs text-muted-foreground">{sp.role}</p>}
+                        </div>
+                      </div>
+                      {sp.profileUrl && (
+                        <a
+                          href={sp.profileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                        >
+                          View full profile
+                          <ExternalLink className="size-3.5" />
+                        </a>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              </div>
-              {session.speakerProfileUrl && (
-                <a
-                  href={session.speakerProfileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-                >
-                  View full profile
-                  <ExternalLink className="size-3.5" />
-                </a>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <SpeakerAvatar name="Speaker" photoUrl={null} placeholder size={48} />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">To be announced</p>
+                    <p className="text-xs text-muted-foreground">Coming soon</p>
+                  </div>
+                </div>
               )}
             </div>
 

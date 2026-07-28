@@ -9,6 +9,7 @@ import { AttendanceTrackersDialog, type TrackerGrant } from "@/components/admin/
 import { DeleteSessionDialog } from "@/components/admin/delete-session-dialog";
 import { createSession, updateSession, cancelSession } from "@/app/admin/events/[eventId]/actions";
 import { clubShort } from "@/lib/clubs";
+import { effectiveSpeakers } from "@/lib/speakers";
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -29,6 +30,7 @@ export type SessionRow = {
   venueLocation: string | null;
   capacity: number;
   bookedCount: number;
+  speakers: unknown;
   speakerProfileId: string | null;
   speakerDescription: string | null;
   status: string;
@@ -136,13 +138,7 @@ export function SessionsPanel({
                         venueName: s.venueName,
                         venueLocation: s.venueLocation ?? "",
                         capacity: s.capacity,
-                        speakerProfileId: s.speakerProfileId ?? "",
-                        speakerDescription: s.speakerDescription ?? "",
-                        speakerName: s.speakerName ?? "",
-                        speakerRole: s.speakerRole ?? "",
-                        speakerPhotoUrl: s.speakerPhotoUrl ?? "",
-                        speakerBio: s.speakerBio ?? "",
-                        speakerProfileUrl: s.speakerProfileUrl ?? "",
+                        speakers: effectiveSpeakers(s),
                         venueDescription: s.venueDescription ?? "",
                         venuePhotoUrl: s.venuePhotoUrl ?? "",
                         venueMapUrl: s.venueMapUrl ?? "",

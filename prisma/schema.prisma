@@ -128,6 +128,10 @@ model Session {
 
   // Detail-page enrichment fields — all optional, purely additive. When empty the detail
   // page falls back to the fields above (speakerDescription etc.) or hides the section.
+  // `speakers` is the multi-speaker source of truth: a JSON array of
+  // { name, role, photoUrl, bio, profileUrl }. The flat speakerName/Role/… fields below are
+  // kept mirrored to the FIRST speaker so legacy readers (email, older sessions) still work.
+  speakers             Json?
   speakerName          String?       @map("speaker_name")
   speakerRole          String?       @map("speaker_role")
   speakerPhotoUrl      String?       @map("speaker_photo_url")

@@ -9,6 +9,7 @@ import { hasAttendanceAccess } from "@/lib/attendance";
 import { AppShell } from "@/components/app-shell";
 import { SessionListFiltered, type FilterableSession } from "@/components/session-list-filtered";
 import { computeSessionStatus } from "@/lib/sessionStatus";
+import { effectiveSpeakers, speakersLabel } from "@/lib/speakers";
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -73,7 +74,7 @@ export default async function EventDetailPage({
       timeLabel: `${DATE_FORMATTER.format(s.startsAt)}, ${TIME_FORMATTER.format(s.startsAt)} – ${TIME_FORMATTER.format(s.endsAt)}`,
       venueName: s.venueName,
       venueLocation: s.venueLocation,
-      speaker: s.speakerDescription,
+      speaker: speakersLabel(effectiveSpeakers(s)),
       club: s.club,
       seatsRemaining,
       capacity: s.capacity,
