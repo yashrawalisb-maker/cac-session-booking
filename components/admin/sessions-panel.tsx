@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SessionFormDialog } from "@/components/admin/session-form-dialog";
 import { AttendanceTrackersDialog, type TrackerGrant } from "@/components/admin/attendance-trackers-dialog";
+import { DeleteSessionDialog } from "@/components/admin/delete-session-dialog";
 import { createSession, updateSession, cancelSession } from "@/app/admin/events/[eventId]/actions";
 import { clubShort } from "@/lib/clubs";
 
@@ -179,6 +180,12 @@ export function SessionsPanel({
                         </Button>
                       </form>
                     )}
+                    <DeleteSessionDialog
+                      eventId={eventId}
+                      sessionId={s.id}
+                      sessionTitle={s.title}
+                      bookedCount={s.bookedCount}
+                    />
                   </div>
                 </TableCell>
               </TableRow>

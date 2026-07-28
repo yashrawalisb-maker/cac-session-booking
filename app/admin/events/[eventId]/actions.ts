@@ -202,6 +202,48 @@ export async function cancelSession(eventId: string, sessionId: string): Promise
   revalidateEvent(eventId);
 }
 
+/**
+ * Permanently delete a session. The schema cascade-deletes its bookings, attendance grants, and
+ * acknowledgment logs — but ticketsUsed is a denormalized counter the cascade can't touch, so we
+ * first give each affected student their ticket back, then delete. One transaction keeps the
+ * counter and the delete atomic. Use `cancelSession` for a reversible soft-cancel instead.
+ */
+export async function deleteSession(
+  eventId: string,
+  sessionId: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _prevState: ActionState,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _formData: FormData
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const session = await prisma.session.findUnique({ where: { id: sessionId }, select: { eventId: true } });
+  if (!session || session.eventId !== eventId) return { error: "Session not found." };
+
+  await prisma.$transaction(
+    async (tx) => {
+      // At most one confirmed booking per user per session (unique [userId, sessionId]), so each
+      // affected user's ticketsUsed is decremented by exactly one.
+      const confirmed = await tx.booking.findMany({
+        where: { sessionId, status: "confirmed" },
+        select: { userId: true },
+      });
+      for (const b of confirmed) {
+        await tx.eventTicketAllotment.updateMany({
+          where: { eventId, userId: b.userId },
+          data: { ticketsUsed: { decrement: 1 } },
+        });
+      }
+      await tx.session.delete({ where: { id: sessionId } });
+    },
+    { timeout: 15000 }
+  );
+
+  revalidateEvent(eventId);
+  return { success: true };
+}
+
 // --- Ticket allotments ---
 
 export async function setDefaultTickets(
