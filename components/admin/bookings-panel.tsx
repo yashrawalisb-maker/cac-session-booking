@@ -16,10 +16,21 @@ export type BookingRow = {
   id: string;
   userName: string;
   sessionTitle: string;
+  track: string | null;
   bookingType: string;
   status: string;
   bookedAt: Date;
   adminNote: string | null;
+};
+
+export type ManualBookingSession = {
+  id: string;
+  title: string;
+  dayLabel: string;
+  capacity: number;
+  bookedCount: number;
+  club: string | null;
+  tracks: { id: string; label: string; seatsRemaining: number }[];
 };
 
 export function BookingsPanel({
@@ -32,7 +43,7 @@ export function BookingsPanel({
   eventId: string;
   bookings: BookingRow[];
   users: { id: string; name: string; isbEmail: string }[];
-  sessions: { id: string; title: string; dayLabel: string; capacity: number; bookedCount: number }[];
+  sessions: ManualBookingSession[];
   cohortSplitCounts: Record<string, number>;
 }) {
   return (
@@ -58,6 +69,7 @@ export function BookingsPanel({
             <TableRow>
               <TableHead>User</TableHead>
               <TableHead>Session</TableHead>
+              <TableHead>Track</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Booked at</TableHead>
@@ -69,6 +81,9 @@ export function BookingsPanel({
               <TableRow key={b.id}>
                 <TableCell className="font-medium">{b.userName}</TableCell>
                 <TableCell>{b.sessionTitle}</TableCell>
+                <TableCell>
+                  {b.track ? b.track : <span className="text-muted-foreground">—</span>}
+                </TableCell>
                 <TableCell>
                   <Badge variant={b.bookingType === "auto_allotted" ? "secondary" : "outline"}>
                     {b.bookingType === "auto_allotted" ? "Auto-assigned" : "Self-selected"}
@@ -87,7 +102,7 @@ export function BookingsPanel({
             ))}
             {bookings.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   No bookings yet.
                 </TableCell>
               </TableRow>

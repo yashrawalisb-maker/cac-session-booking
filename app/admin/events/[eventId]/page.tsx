@@ -7,6 +7,7 @@ import { BookingsPanel } from "@/components/admin/bookings-panel";
 import { AutoAllocateButton } from "@/components/admin/auto-allocate-button";
 import { BookingResetPanel } from "@/components/admin/booking-reset-panel";
 import { DeleteEventPanel } from "@/components/admin/delete-event-panel";
+import { wibTrackLabel, wibTrackOrder } from "@/lib/wibTracks";
 
 export default async function AdminEventDetailPage({
   params,
@@ -19,11 +20,11 @@ export default async function AdminEventDetailPage({
   if (!event) notFound();
 
   const [sessions, allotments, bookings, allUsers, attendanceGrants] = await Promise.all([
-    prisma.session.findMany({ where: { eventId }, orderBy: { startsAt: "asc" } }),
+    prisma.session.findMany({ where: { eventId }, include: { tracks: true }, orderBy: { startsAt: "asc" } }),
     prisma.eventTicketAllotment.findMany({ where: { eventId }, include: { user: true } }),
     prisma.booking.findMany({
       where: { eventId },
-      include: { user: true, session: true },
+      include: { user: true, session: true, sessionTrack: true },
       orderBy: { bookedAt: "desc" },
     }),
     prisma.user.findMany({ where: { isAdmin: false }, orderBy: { name: "asc" } }),
@@ -97,6 +98,7 @@ export default async function AdminEventDetailPage({
           id: b.id,
           userName: b.user.name,
           sessionTitle: b.session.title,
+          track: b.sessionTrack ? wibTrackLabel(b.sessionTrack.track) : null,
           bookingType: b.bookingType,
           status: b.status,
           bookedAt: b.bookedAt,
@@ -109,6 +111,15 @@ export default async function AdminEventDetailPage({
           dayLabel: s.dayLabel,
           capacity: s.capacity,
           bookedCount: s.bookedCount,
+          club: s.club,
+          tracks: s.tracks
+            .slice()
+            .sort((a, b) => wibTrackOrder(a.track) - wibTrackOrder(b.track))
+            .map((t) => ({
+              id: t.id,
+              label: wibTrackLabel(t.track) ?? t.track,
+              seatsRemaining: Math.max(t.capacity - t.bookedCount, 0),
+            })),
         }))}
         cohortSplitCounts={cohortSplitCounts}
       />

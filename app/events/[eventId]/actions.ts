@@ -11,12 +11,13 @@ export async function bookSessionAction(
   eventId: string,
   sessionId: string,
   // useActionState requires this exact (prevState, formData) trailing signature after binding.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _prevState: BookActionState,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _formData: FormData
+  formData: FormData
 ): Promise<BookActionState> {
   const user = await requireUser();
+
+  // Only WIB sessions send a track; the booking engine ignores it for every other session.
+  const sessionTrackId = String(formData.get("sessionTrackId") ?? "") || undefined;
 
   try {
     await bookSessionForUser(prisma, {
@@ -24,6 +25,7 @@ export async function bookSessionAction(
       eventId,
       sessionId,
       bookingType: "self_selected",
+      sessionTrackId,
     });
   } catch (e) {
     if (e instanceof BookingError) return { error: e.message };

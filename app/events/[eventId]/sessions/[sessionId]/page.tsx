@@ -7,6 +7,8 @@ import { isPast } from "@/lib/time";
 import { computeSessionStatus } from "@/lib/sessionStatus";
 import { normalizeImageUrl } from "@/lib/imageUrl";
 import { clubLabel } from "@/lib/clubs";
+import { effectiveSpeakers } from "@/lib/speakers";
+import { isWibClub, wibTrackLabel, wibTrackOrder } from "@/lib/wibTracks";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { hasAttendanceAccess } from "@/lib/attendance";
 import { AppShell } from "@/components/app-shell";
@@ -71,7 +73,10 @@ export default async function SessionDetailPage({
   const event = await prisma.event.findUnique({ where: { id: eventId } });
   if (!event || event.status !== "published") notFound();
 
-  const session = await prisma.session.findUnique({ where: { id: sessionId } });
+  const session = await prisma.session.findUnique({
+    where: { id: sessionId },
+    include: { tracks: true },
+  });
   if (!session || session.eventId !== eventId) notFound();
 
   const allotment = await prisma.eventTicketAllotment.findUnique({
@@ -99,10 +104,20 @@ export default async function SessionDetailPage({
     deadlinePassed,
   });
 
-  const speakerName = session.speakerName ?? session.speakerDescription ?? null;
-  const speakerRole = session.speakerRole;
-  const speakerBio = session.speakerBio ?? session.speakerDescription;
-  const hasSpeaker = !!(speakerName || speakerBio);
+  const speakers = effectiveSpeakers(session);
+  const hasSpeaker = speakers.length > 0;
+
+  // WIB sessions show table tracks (each its own capacity + speaker) instead of a flat speaker list.
+  const sortedTracks = isWibClub(session.club)
+    ? session.tracks.slice().sort((a, b) => wibTrackOrder(a.track) - wibTrackOrder(b.track))
+    : [];
+  const isWib = sortedTracks.length > 0;
+  const bookableTracks = sortedTracks.map((t) => ({
+    id: t.id,
+    label: wibTrackLabel(t.track) ?? t.track,
+    speakerName: t.speakerName,
+    seatsRemaining: Math.max(t.capacity - t.bookedCount, 0),
+  }));
 
   const keyTakeaways = session.keyTakeaways?.trim();
   const agenda = session.agenda?.trim();
@@ -162,7 +177,7 @@ export default async function SessionDetailPage({
             <Tabs defaultValue="overview">
               <TabsList>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="speaker">About speaker</TabsTrigger>
+                <TabsTrigger value="speaker">{isWib ? "Tracks" : "About speaker"}</TabsTrigger>
                 <TabsTrigger value="agenda">Agenda</TabsTrigger>
                 <TabsTrigger value="attend">Who should attend</TabsTrigger>
               </TabsList>
@@ -187,41 +202,91 @@ export default async function SessionDetailPage({
               </TabsContent>
 
               <TabsContent value="speaker" className="rounded-xl border border-border bg-card p-5">
-                <h2 className="mb-3 text-base font-semibold">About the speaker</h2>
-                <div className="flex flex-col gap-4 sm:flex-row">
-                  <SpeakerAvatar
-                    name={speakerName ?? "Speaker"}
-                    photoUrl={session.speakerPhotoUrl}
-                    placeholder={!hasSpeaker}
-                    size={64}
-                  />
-                  <div className="flex flex-1 flex-col gap-1">
-                    <p className="font-semibold text-foreground">{speakerName ?? "To be announced"}</p>
-                    {speakerRole ? (
-                      <p className="text-sm text-muted-foreground">{speakerRole}</p>
-                    ) : (
-                      !hasSpeaker && (
-                        <p className="text-sm text-muted-foreground">
-                          Speaker details will be shared here soon.
-                        </p>
-                      )
-                    )}
-                    {speakerBio && (
-                      <p className="mt-2 text-sm whitespace-pre-line text-muted-foreground">{speakerBio}</p>
-                    )}
-                    {session.speakerProfileUrl && (
-                      <a
-                        href={session.speakerProfileUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-                      >
-                        View full profile
-                        <ExternalLink className="size-3.5" />
-                      </a>
-                    )}
+                <h2 className="mb-3 text-base font-semibold">
+                  {isWib ? "Table tracks" : `About the speaker${speakers.length > 1 ? "s" : ""}`}
+                </h2>
+                {isWib ? (
+                  <div className="flex flex-col gap-5">
+                    {sortedTracks.map((t) => {
+                      const seats = Math.max(t.capacity - t.bookedCount, 0);
+                      return (
+                        <div
+                          key={t.id}
+                          className="flex flex-col gap-4 border-t border-border pt-5 first:border-t-0 first:pt-0 sm:flex-row"
+                        >
+                          <SpeakerAvatar
+                            name={t.speakerName ?? wibTrackLabel(t.track) ?? "Track"}
+                            photoUrl={t.speakerPhotoUrl}
+                            placeholder={!t.speakerName}
+                            size={64}
+                          />
+                          <div className="flex flex-1 flex-col gap-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-semibold text-foreground">{wibTrackLabel(t.track)}</p>
+                              <span
+                                className={`shrink-0 text-xs ${seats <= 0 ? "text-danger" : "text-muted-foreground"}`}
+                              >
+                                {seats <= 0 ? "Full" : `${seats} seat${seats === 1 ? "" : "s"} left`}
+                              </span>
+                            </div>
+                            {t.speakerName && <p className="text-sm font-medium text-foreground">{t.speakerName}</p>}
+                            {t.speakerRole && <p className="text-sm text-muted-foreground">{t.speakerRole}</p>}
+                            {t.speakerBio && (
+                              <p className="mt-1 text-sm whitespace-pre-line text-muted-foreground">{t.speakerBio}</p>
+                            )}
+                            {t.speakerProfileUrl && (
+                              <a
+                                href={t.speakerProfileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-2 inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                              >
+                                View full profile
+                                <ExternalLink className="size-3.5" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
+                ) : hasSpeaker ? (
+                  <div className="flex flex-col gap-6">
+                    {speakers.map((sp, i) => (
+                      <div key={i} className="flex flex-col gap-4 sm:flex-row">
+                        <SpeakerAvatar name={sp.name} photoUrl={sp.photoUrl} placeholder={false} size={64} />
+                        <div className="flex flex-1 flex-col gap-1">
+                          <p className="font-semibold text-foreground">{sp.name}</p>
+                          {sp.role && <p className="text-sm text-muted-foreground">{sp.role}</p>}
+                          {sp.bio && (
+                            <p className="mt-2 text-sm whitespace-pre-line text-muted-foreground">{sp.bio}</p>
+                          )}
+                          {sp.profileUrl && (
+                            <a
+                              href={sp.profileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                            >
+                              View full profile
+                              <ExternalLink className="size-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-4 sm:flex-row">
+                    <SpeakerAvatar name="Speaker" photoUrl={null} placeholder size={64} />
+                    <div className="flex flex-1 flex-col gap-1">
+                      <p className="font-semibold text-foreground">To be announced</p>
+                      <p className="text-sm text-muted-foreground">
+                        Speaker details will be shared here soon.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="agenda" className="rounded-xl border border-border bg-card p-5">
@@ -246,38 +311,47 @@ export default async function SessionDetailPage({
 
           {/* Sidebar */}
           <div className="flex flex-col gap-4">
+            {!isWib && (
             <div className="rounded-xl border border-border bg-card p-4">
-              <h3 className="mb-3 text-sm font-semibold">Speaker profile</h3>
-              <div className="flex items-center gap-3">
-                <SpeakerAvatar
-                  name={speakerName ?? "Speaker"}
-                  photoUrl={session.speakerPhotoUrl}
-                  placeholder={!hasSpeaker}
-                  size={48}
-                />
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    {speakerName ?? "To be announced"}
-                  </p>
-                  {speakerRole ? (
-                    <p className="text-xs text-muted-foreground">{speakerRole}</p>
-                  ) : (
-                    !hasSpeaker && <p className="text-xs text-muted-foreground">Coming soon</p>
-                  )}
+              <h3 className="mb-3 text-sm font-semibold">
+                {speakers.length > 1 ? "Speakers" : "Speaker profile"}
+              </h3>
+              {hasSpeaker ? (
+                <div className="flex flex-col gap-4">
+                  {speakers.map((sp, i) => (
+                    <div key={i} className="flex flex-col gap-2">
+                      <div className="flex items-center gap-3">
+                        <SpeakerAvatar name={sp.name} photoUrl={sp.photoUrl} placeholder={false} size={48} />
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">{sp.name}</p>
+                          {sp.role && <p className="text-xs text-muted-foreground">{sp.role}</p>}
+                        </div>
+                      </div>
+                      {sp.profileUrl && (
+                        <a
+                          href={sp.profileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                        >
+                          View full profile
+                          <ExternalLink className="size-3.5" />
+                        </a>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              </div>
-              {session.speakerProfileUrl && (
-                <a
-                  href={session.speakerProfileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-                >
-                  View full profile
-                  <ExternalLink className="size-3.5" />
-                </a>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <SpeakerAvatar name="Speaker" photoUrl={null} placeholder size={48} />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">To be announced</p>
+                    <p className="text-xs text-muted-foreground">Coming soon</p>
+                  </div>
+                </div>
               )}
             </div>
+            )}
 
             <div className="rounded-xl border border-border bg-card p-4">
               <h3 className="mb-1 text-sm font-semibold">Event details</h3>
@@ -300,7 +374,12 @@ export default async function SessionDetailPage({
               </div>
             </div>
 
-            <SessionBookPanel eventId={eventId} sessionId={sessionId} status={status} />
+            <SessionBookPanel
+              eventId={eventId}
+              sessionId={sessionId}
+              status={status}
+              wibTracks={isWib ? bookableTracks : undefined}
+            />
           </div>
         </div>
       </div>

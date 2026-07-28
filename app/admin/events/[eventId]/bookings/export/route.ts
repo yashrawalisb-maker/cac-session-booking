@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { wibTrackLabel } from "@/lib/wibTracks";
 
 function csvEscape(value: string) {
   if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
@@ -15,7 +16,7 @@ export async function GET(
 
   const bookings = await prisma.booking.findMany({
     where: { eventId },
-    include: { user: true, session: true },
+    include: { user: true, session: true, sessionTrack: true },
     orderBy: { bookedAt: "asc" },
   });
 
@@ -24,6 +25,7 @@ export async function GET(
     "isb_email",
     "pgp_id",
     "session_title",
+    "table_track",
     "day_label",
     "starts_at",
     "venue_name",
@@ -37,6 +39,7 @@ export async function GET(
       b.user.isbEmail,
       b.user.pgpId,
       b.session.title,
+      b.sessionTrack ? wibTrackLabel(b.sessionTrack.track) ?? "" : "",
       b.session.dayLabel,
       b.session.startsAt.toISOString(),
       b.session.venueName,

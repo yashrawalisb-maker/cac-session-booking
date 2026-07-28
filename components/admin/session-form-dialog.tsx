@@ -16,6 +16,19 @@ import {
 import type { ActionState } from "@/app/admin/events/[eventId]/actions";
 import { CLUBS } from "@/lib/clubs";
 import { toIstDateTimeLocal } from "@/lib/time";
+import type { SessionSpeaker } from "@/lib/speakers";
+import { WIB_TRACKS, isWibClub } from "@/lib/wibTracks";
+
+/** Existing track data for a WIB session, passed in when editing. */
+export type WibTrackDefault = {
+  track: string;
+  capacity: number;
+  speakerName: string;
+  speakerRole: string;
+  speakerPhotoUrl: string;
+  speakerBio: string;
+  speakerProfileUrl: string;
+};
 
 export type SessionDefaults = {
   title: string;
@@ -26,13 +39,8 @@ export type SessionDefaults = {
   venueName: string;
   venueLocation: string;
   capacity: number;
-  speakerProfileId: string;
-  speakerDescription: string;
-  speakerName: string;
-  speakerRole: string;
-  speakerPhotoUrl: string;
-  speakerBio: string;
-  speakerProfileUrl: string;
+  speakers: SessionSpeaker[];
+  wibTracks: WibTrackDefault[];
   venueDescription: string;
   venuePhotoUrl: string;
   venueMapUrl: string;
@@ -43,6 +51,49 @@ export type SessionDefaults = {
   agenda: string;
   whoShouldAttend: string;
 };
+
+type SpeakerDraft = { name: string; role: string; photoUrl: string; bio: string; profileUrl: string };
+
+type WibTrackDraft = {
+  track: string;
+  capacity: string;
+  speakerName: string;
+  speakerRole: string;
+  speakerPhotoUrl: string;
+  speakerBio: string;
+  speakerProfileUrl: string;
+};
+
+/** Always returns the 7 fixed tracks in order, pre-filled from any existing rows. */
+function seedWibTracks(existing: WibTrackDefault[] | undefined): WibTrackDraft[] {
+  const byTrack = new Map((existing ?? []).map((t) => [t.track, t]));
+  return WIB_TRACKS.map((t) => {
+    const e = byTrack.get(t.value);
+    return {
+      track: t.value,
+      capacity: e ? String(e.capacity) : "",
+      speakerName: e?.speakerName ?? "",
+      speakerRole: e?.speakerRole ?? "",
+      speakerPhotoUrl: e?.speakerPhotoUrl ?? "",
+      speakerBio: e?.speakerBio ?? "",
+      speakerProfileUrl: e?.speakerProfileUrl ?? "",
+    };
+  });
+}
+
+function emptySpeaker(): SpeakerDraft {
+  return { name: "", role: "", photoUrl: "", bio: "", profileUrl: "" };
+}
+
+function toDraft(s: SessionSpeaker): SpeakerDraft {
+  return {
+    name: s.name ?? "",
+    role: s.role ?? "",
+    photoUrl: s.photoUrl ?? "",
+    bio: s.bio ?? "",
+    profileUrl: s.profileUrl ?? "",
+  };
+}
 
 function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -69,10 +120,55 @@ export function SessionFormDialog({
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(action, undefined);
 
+  const [speakers, setSpeakers] = useState<SpeakerDraft[]>(() =>
+    defaults?.speakers?.length ? defaults.speakers.map(toDraft) : [emptySpeaker()]
+  );
+  // Controlled so selecting "Women in Business" can swap the Speakers section for the 7-track editor.
+  const [club, setClub] = useState(defaults?.club ?? "");
+  const [wibTracks, setWibTracks] = useState<WibTrackDraft[]>(() => seedWibTracks(defaults?.wibTracks));
+  const isWib = isWibClub(club);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (state?.success) setOpen(false);
   }, [state]);
+
+  function updateSpeaker(index: number, field: keyof SpeakerDraft, value: string) {
+    setSpeakers((prev) => prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)));
+  }
+  function addSpeaker() {
+    setSpeakers((prev) => [...prev, emptySpeaker()]);
+  }
+  function removeSpeaker(index: number) {
+    setSpeakers((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+  }
+  function updateTrack(index: number, field: keyof WibTrackDraft, value: string) {
+    setWibTracks((prev) => prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)));
+  }
+
+  // Only speakers with a name are submitted; the server trims/normalizes the rest.
+  const serializedSpeakers = JSON.stringify(
+    speakers
+      .filter((s) => s.name.trim())
+      .map((s) => ({
+        name: s.name.trim(),
+        role: s.role.trim(),
+        photoUrl: s.photoUrl.trim(),
+        bio: s.bio.trim(),
+        profileUrl: s.profileUrl.trim(),
+      }))
+  );
+  const serializedTracks = JSON.stringify(
+    wibTracks.map((t) => ({
+      track: t.track,
+      capacity: t.capacity.trim(),
+      speakerName: t.speakerName.trim(),
+      speakerRole: t.speakerRole.trim(),
+      speakerPhotoUrl: t.speakerPhotoUrl.trim(),
+      speakerBio: t.speakerBio.trim(),
+      speakerProfileUrl: t.speakerProfileUrl.trim(),
+    }))
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -95,17 +191,19 @@ export function SessionFormDialog({
               <Label htmlFor="dayLabel">Day label</Label>
               <Input id="dayLabel" name="dayLabel" required placeholder="Day 1" defaultValue={defaults?.dayLabel} />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="capacity">Capacity</Label>
-              <Input
-                id="capacity"
-                name="capacity"
-                type="number"
-                min={1}
-                required
-                defaultValue={defaults?.capacity}
-              />
-            </div>
+            {!isWib && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="capacity">Capacity</Label>
+                <Input
+                  id="capacity"
+                  name="capacity"
+                  type="number"
+                  min={1}
+                  required
+                  defaultValue={defaults?.capacity}
+                />
+              </div>
+            )}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="startsAt">Starts at</Label>
               <Input
@@ -135,7 +233,8 @@ export function SessionFormDialog({
               <select
                 id="club"
                 name="club"
-                defaultValue={defaults?.club ?? ""}
+                value={club}
+                onChange={(e) => setClub(e.target.value)}
                 className="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 <option value="">— Select club —</option>
@@ -145,6 +244,11 @@ export function SessionFormDialog({
                   </option>
                 ))}
               </select>
+              {isWib && (
+                <p className="text-xs text-muted-foreground">
+                  Capacity comes from the 7 table tracks below.
+                </p>
+              )}
             </div>
           </FormSection>
 
@@ -175,41 +279,163 @@ export function SessionFormDialog({
             </div>
           </FormSection>
 
-          <FormSection title="Speaker">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="speakerName">Speaker name</Label>
-              <Input id="speakerName" name="speakerName" defaultValue={defaults?.speakerName} />
+          {!isWib && (
+          <div className="col-span-2 flex flex-col gap-3 border-t border-border pt-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Speakers
+              </h3>
+              <Button type="button" variant="outline" size="sm" onClick={addSpeaker}>
+                Add speaker
+              </Button>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="speakerRole">Speaker role / title</Label>
-              <Input id="speakerRole" name="speakerRole" placeholder="Marketing Leader & Strategist" defaultValue={defaults?.speakerRole} />
+
+            {speakers.map((sp, i) => (
+              <div key={i} className="flex flex-col gap-3 rounded-md border border-border p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Speaker {i + 1}</span>
+                  {speakers.length > 1 && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => removeSpeaker(i)}>
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`speaker-${i}-name`}>Name</Label>
+                    <Input
+                      id={`speaker-${i}-name`}
+                      value={sp.name}
+                      onChange={(e) => updateSpeaker(i, "name", e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`speaker-${i}-role`}>Role / title</Label>
+                    <Input
+                      id={`speaker-${i}-role`}
+                      placeholder="Director, Avendus"
+                      value={sp.role}
+                      onChange={(e) => updateSpeaker(i, "role", e.target.value)}
+                    />
+                  </div>
+                  <div className="col-span-2 flex flex-col gap-1.5">
+                    <Label htmlFor={`speaker-${i}-photoUrl`}>Photo URL</Label>
+                    <Input
+                      id={`speaker-${i}-photoUrl`}
+                      type="url"
+                      placeholder="https://…"
+                      value={sp.photoUrl}
+                      onChange={(e) => updateSpeaker(i, "photoUrl", e.target.value)}
+                    />
+                  </div>
+                  <div className="col-span-2 flex flex-col gap-1.5">
+                    <Label htmlFor={`speaker-${i}-bio`}>Bio</Label>
+                    <Textarea
+                      id={`speaker-${i}-bio`}
+                      rows={3}
+                      value={sp.bio}
+                      onChange={(e) => updateSpeaker(i, "bio", e.target.value)}
+                    />
+                  </div>
+                  <div className="col-span-2 flex flex-col gap-1.5">
+                    <Label htmlFor={`speaker-${i}-profileUrl`}>Full profile link</Label>
+                    <Input
+                      id={`speaker-${i}-profileUrl`}
+                      type="url"
+                      placeholder="https://linkedin.com/…"
+                      value={sp.profileUrl}
+                      onChange={(e) => updateSpeaker(i, "profileUrl", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            <input type="hidden" name="speakers" value={serializedSpeakers} />
+          </div>
+          )}
+
+          {isWib && (
+            <div className="col-span-2 flex flex-col gap-3 border-t border-border pt-4">
+              <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Women in Business — table tracks
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Students booking this session choose one of these seven tracks. Each has its own
+                capacity (required); the speaker is optional. The session&apos;s total capacity is
+                the sum of the seven.
+              </p>
+
+              {wibTracks.map((t, i) => (
+                <div key={t.track} className="flex flex-col gap-3 rounded-md border border-border p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-medium">{WIB_TRACKS[i].label}</span>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`track-${t.track}-capacity`} className="text-xs text-muted-foreground">
+                        Capacity
+                      </Label>
+                      <Input
+                        id={`track-${t.track}-capacity`}
+                        type="number"
+                        min={1}
+                        required
+                        className="h-8 w-24"
+                        value={t.capacity}
+                        onChange={(e) => updateTrack(i, "capacity", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor={`track-${t.track}-name`}>Speaker name</Label>
+                      <Input
+                        id={`track-${t.track}-name`}
+                        value={t.speakerName}
+                        onChange={(e) => updateTrack(i, "speakerName", e.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor={`track-${t.track}-role`}>Speaker role / title</Label>
+                      <Input
+                        id={`track-${t.track}-role`}
+                        value={t.speakerRole}
+                        onChange={(e) => updateTrack(i, "speakerRole", e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-2 flex flex-col gap-1.5">
+                      <Label htmlFor={`track-${t.track}-photoUrl`}>Speaker photo URL</Label>
+                      <Input
+                        id={`track-${t.track}-photoUrl`}
+                        type="url"
+                        placeholder="https://…"
+                        value={t.speakerPhotoUrl}
+                        onChange={(e) => updateTrack(i, "speakerPhotoUrl", e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-2 flex flex-col gap-1.5">
+                      <Label htmlFor={`track-${t.track}-bio`}>Speaker bio</Label>
+                      <Textarea
+                        id={`track-${t.track}-bio`}
+                        rows={2}
+                        value={t.speakerBio}
+                        onChange={(e) => updateTrack(i, "speakerBio", e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-2 flex flex-col gap-1.5">
+                      <Label htmlFor={`track-${t.track}-profileUrl`}>Full profile link</Label>
+                      <Input
+                        id={`track-${t.track}-profileUrl`}
+                        type="url"
+                        placeholder="https://linkedin.com/…"
+                        value={t.speakerProfileUrl}
+                        onChange={(e) => updateTrack(i, "speakerProfileUrl", e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <input type="hidden" name="tracks" value={serializedTracks} />
             </div>
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <Label htmlFor="speakerPhotoUrl">Speaker photo URL</Label>
-              <Input id="speakerPhotoUrl" name="speakerPhotoUrl" type="url" placeholder="https://…" defaultValue={defaults?.speakerPhotoUrl} />
-            </div>
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <Label htmlFor="speakerBio">Speaker bio</Label>
-              <Textarea id="speakerBio" name="speakerBio" rows={3} defaultValue={defaults?.speakerBio} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="speakerProfileUrl">Full profile link</Label>
-              <Input id="speakerProfileUrl" name="speakerProfileUrl" type="url" placeholder="https://linkedin.com/…" defaultValue={defaults?.speakerProfileUrl} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="speakerProfileId">Speaker profile ID</Label>
-              <Input id="speakerProfileId" name="speakerProfileId" defaultValue={defaults?.speakerProfileId} />
-            </div>
-            <div className="col-span-2 flex flex-col gap-1.5">
-              <Label htmlFor="speakerDescription">Speaker description (legacy, shown as fallback)</Label>
-              <Textarea
-                id="speakerDescription"
-                name="speakerDescription"
-                rows={2}
-                defaultValue={defaults?.speakerDescription}
-              />
-            </div>
-          </FormSection>
+          )}
 
           <FormSection title="Detail page content">
             <div className="col-span-2 flex flex-col gap-1.5">

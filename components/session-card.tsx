@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { bookSessionAction, type BookActionState } from "@/app/events/[eventId]/actions";
 import { AddToCalendarLink } from "@/components/add-to-calendar-link";
+import { WibTrackBooking, type BookableTrack } from "@/components/wib-track-booking";
 
 export type SessionCardStatus =
   | "bookable"
@@ -30,6 +31,7 @@ export function SessionCard({
   seatsRemaining,
   capacity,
   status,
+  wibTracks,
 }: {
   eventId: string;
   sessionId: string;
@@ -43,6 +45,7 @@ export function SessionCard({
   seatsRemaining: number;
   capacity: number;
   status: SessionCardStatus;
+  wibTracks?: BookableTrack[];
 }) {
   const boundAction = bookSessionAction.bind(null, eventId, sessionId);
   const [state, formAction, pending] = useActionState<BookActionState, FormData>(
@@ -113,11 +116,15 @@ export function SessionCard({
 
         <div className="mt-auto pt-1">
           {effectiveStatus === "bookable" ? (
-            <form action={formAction}>
-              <Button type="submit" disabled={pending} className="w-full">
-                {pending ? "Booking…" : "Book this slot"}
-              </Button>
-            </form>
+            wibTracks && wibTracks.length > 0 ? (
+              <WibTrackBooking eventId={eventId} sessionId={sessionId} tracks={wibTracks} />
+            ) : (
+              <form action={formAction}>
+                <Button type="submit" disabled={pending} className="w-full">
+                  {pending ? "Booking…" : "Book this slot"}
+                </Button>
+              </form>
+            )
           ) : isBooked ? (
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-center gap-2 rounded-lg bg-success-bg py-2 text-sm font-medium text-success">

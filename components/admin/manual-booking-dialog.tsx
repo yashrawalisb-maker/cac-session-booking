@@ -21,13 +21,31 @@ import {
   type GroupBookingActionState,
 } from "@/app/admin/events/[eventId]/actions";
 import { COHORT_SPLITS } from "@/lib/cohortSplits";
+import { isWibClub } from "@/lib/wibTracks";
 
-type SessionOption = { id: string; title: string; dayLabel: string; capacity: number; bookedCount: number };
+type SessionOption = {
+  id: string;
+  title: string;
+  dayLabel: string;
+  capacity: number;
+  bookedCount: number;
+  club: string | null;
+  tracks: { id: string; label: string; seatsRemaining: number }[];
+};
 
-function SessionSelect({ id, sessions }: { id: string; sessions: SessionOption[] }) {
+function SessionSelect({
+  id,
+  sessions,
+  requireTrack = false,
+}: {
+  id: string;
+  sessions: SessionOption[];
+  requireTrack?: boolean;
+}) {
   const [selectedId, setSelectedId] = useState("");
   const selected = sessions.find((s) => s.id === selectedId);
   const remaining = selected ? Math.max(selected.capacity - selected.bookedCount, 0) : null;
+  const isWib = !!selected && isWibClub(selected.club);
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -50,6 +68,32 @@ function SessionSelect({ id, sessions }: { id: string; sessions: SessionOption[]
       {remaining !== null && (
         <p className="text-xs text-muted-foreground">
           {remaining} of {selected!.capacity} seats remaining — capacity can&apos;t be bypassed.
+        </p>
+      )}
+
+      {isWib && requireTrack && (
+        <div className="mt-1 flex flex-col gap-1.5">
+          <Label htmlFor={`${id}-track`}>Table track</Label>
+          <select
+            id={`${id}-track`}
+            name="sessionTrackId"
+            required
+            defaultValue=""
+            className="h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 text-sm"
+          >
+            <option value="">Select a track…</option>
+            {selected!.tracks.map((t) => (
+              <option key={t.id} value={t.id} disabled={t.seatsRemaining <= 0}>
+                {t.label} {t.seatsRemaining <= 0 ? "(full)" : `(${t.seatsRemaining} left)`}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {isWib && !requireTrack && (
+        <p className="text-xs text-warning">
+          Group booking isn&apos;t supported for Women in Business sessions — book students
+          individually so each gets a table track.
         </p>
       )}
     </div>
@@ -90,7 +134,7 @@ function SingleUserForm({
         </select>
       </div>
 
-      <SessionSelect id="single-sessionId" sessions={sessions} />
+      <SessionSelect id="single-sessionId" sessions={sessions} requireTrack />
 
       <div className="flex items-center gap-2">
         <Checkbox id="bypassTicketCheck" name="bypassTicketCheck" />

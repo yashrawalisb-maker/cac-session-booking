@@ -1,6 +1,7 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { attemptBooking, BookingError } from "./booking";
 import { sendAcknowledgmentEmail } from "./email";
+import { isWibClub } from "./wibTracks";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -52,7 +53,10 @@ export async function runAutoAllocation(prisma: PrismaClient, eventId: string): 
     summary.usersProcessed++;
 
     const allOpenSessions = await prisma.session.findMany({ where: { eventId, status: "open" } });
-    const openSessions = allOpenSessions.filter((s) => s.bookedCount < s.capacity);
+    // Skip WIB sessions — auto-allocation can't choose a table track on the student's behalf.
+    const openSessions = allOpenSessions.filter(
+      (s) => s.bookedCount < s.capacity && !isWibClub(s.club)
+    );
     const alreadyBooked = await prisma.booking.findMany({
       where: { userId: allotment.userId, eventId, status: "confirmed" },
       select: { sessionId: true },

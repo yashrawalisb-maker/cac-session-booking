@@ -11,6 +11,62 @@ import { parseCsvWithHeader } from "@/lib/csv";
 import { isClubValue } from "@/lib/clubs";
 import { isCohortSplitValue } from "@/lib/cohortSplits";
 import { parseIstDateTime } from "@/lib/time";
+import { parseSpeakers } from "@/lib/speakers";
+import { isWibClub, isWibTrackValue } from "@/lib/wibTracks";
+
+type WibTrackInput = {
+  track: string;
+  capacity: number;
+  speakerName: string | null;
+  speakerRole: string | null;
+  speakerPhotoUrl: string | null;
+  speakerBio: string | null;
+  speakerProfileUrl: string | null;
+};
+
+/** Parse + validate the WIB `tracks` JSON from the session form. Each track needs a capacity ≥ 1. */
+function parseWibTracks(raw: FormDataEntryValue | null): { tracks?: WibTrackInput[]; error?: string } {
+  let value: unknown = raw;
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return { error: "Could not read the table-track data." };
+    }
+  }
+  if (!Array.isArray(value)) return { error: "Add capacity for the table tracks." };
+
+  const str = (x: unknown) => {
+    const s = String(x ?? "").trim();
+    return s || null;
+  };
+  const tracks: WibTrackInput[] = [];
+  const seen = new Set<string>();
+  for (const v of value) {
+    if (!v || typeof v !== "object") continue;
+    const track = String((v as Record<string, unknown>).track ?? "");
+    if (!isWibTrackValue(track) || seen.has(track)) continue;
+    const capacity = Number((v as Record<string, unknown>).capacity);
+    if (!Number.isInteger(capacity) || capacity < 1) {
+      return { error: "Enter a capacity of 1 or more for every table track." };
+    }
+    seen.add(track);
+    const rec = v as Record<string, unknown>;
+    tracks.push({
+      track,
+      capacity,
+      speakerName: str(rec.speakerName),
+      speakerRole: str(rec.speakerRole),
+      speakerPhotoUrl: str(rec.speakerPhotoUrl),
+      speakerBio: str(rec.speakerBio),
+      speakerProfileUrl: str(rec.speakerProfileUrl),
+    });
+  }
+  if (tracks.length === 0) {
+    return { error: "A Women in Business session needs at least one table track with a capacity." };
+  }
+  return { tracks };
+}
 
 export type ActionState = { error?: string; success?: boolean; message?: string } | undefined;
 
@@ -103,23 +159,34 @@ function parseSessionForm(formData: FormData) {
   const endsAt = String(formData.get("endsAt") ?? "");
   const venueName = String(formData.get("venueName") ?? "").trim();
   const venueLocation = String(formData.get("venueLocation") ?? "").trim();
-  const capacity = Number(formData.get("capacity") ?? 0);
-  const speakerProfileId = String(formData.get("speakerProfileId") ?? "").trim();
-  const speakerDescription = String(formData.get("speakerDescription") ?? "").trim();
+  const club = String(formData.get("club") ?? "").trim();
+  const isWib = isWibClub(club);
 
-  // Detail-page enrichment — all optional.
-  const speakerName = String(formData.get("speakerName") ?? "").trim();
-  const speakerRole = String(formData.get("speakerRole") ?? "").trim();
-  const speakerPhotoUrl = String(formData.get("speakerPhotoUrl") ?? "").trim();
-  const speakerBio = String(formData.get("speakerBio") ?? "").trim();
-  const speakerProfileUrl = String(formData.get("speakerProfileUrl") ?? "").trim();
+  // WIB sessions are split into table tracks: capacity is the sum of the tracks and the
+  // session-level speakers are cleared (each track carries its own speaker instead). Every other
+  // club keeps the normal single-capacity + multi-speaker behaviour.
+  let wibTracks: WibTrackInput[] = [];
+  let capacity: number;
+  if (isWib) {
+    const parsedTracks = parseWibTracks(formData.get("tracks"));
+    if (parsedTracks.error) return { error: parsedTracks.error } as const;
+    wibTracks = parsedTracks.tracks!;
+    capacity = wibTracks.reduce((sum, t) => sum + t.capacity, 0);
+  } else {
+    capacity = Number(formData.get("capacity") ?? 0);
+  }
+
+  // Multi-speaker: the form posts a JSON array; the flat speaker* columns below are kept mirrored
+  // to the first speaker so legacy readers (booking email, un-migrated sessions) still work.
+  const speakers = isWib ? [] : parseSpeakers(formData.get("speakers"));
+  const primary = speakers[0] ?? null;
+
   const venueDescription = String(formData.get("venueDescription") ?? "").trim();
   const venuePhotoUrl = String(formData.get("venuePhotoUrl") ?? "").trim();
   const venueMapUrl = String(formData.get("venueMapUrl") ?? "").trim();
   const campus = String(formData.get("campus") ?? "").trim();
   const eventType = String(formData.get("eventType") ?? "").trim();
-  // organizedBy is legacy free-text — no longer editable; the structured `club` replaces it.
-  const club = String(formData.get("club") ?? "").trim();
+  // organizedBy is legacy free-text — no longer editable; the structured `club` (read above) replaces it.
   const keyTakeaways = String(formData.get("keyTakeaways") ?? "").trim();
   const agenda = String(formData.get("agenda") ?? "").trim();
   const whoShouldAttend = String(formData.get("whoShouldAttend") ?? "").trim();
@@ -146,13 +213,13 @@ function parseSessionForm(formData: FormData) {
       venueName,
       venueLocation: venueLocation || null,
       capacity,
-      speakerProfileId: speakerProfileId || null,
-      speakerDescription: speakerDescription || null,
-      speakerName: speakerName || null,
-      speakerRole: speakerRole || null,
-      speakerPhotoUrl: speakerPhotoUrl || null,
-      speakerBio: speakerBio || null,
-      speakerProfileUrl: speakerProfileUrl || null,
+      speakers,
+      speakerName: primary?.name ?? null,
+      speakerRole: primary?.role ?? null,
+      speakerPhotoUrl: primary?.photoUrl ?? null,
+      speakerBio: primary?.bio ?? null,
+      speakerProfileUrl: primary?.profileUrl ?? null,
+      speakerDescription: primary ? [primary.name, primary.role].filter(Boolean).join(" — ") : null,
       venueDescription: venueDescription || null,
       venuePhotoUrl: venuePhotoUrl || null,
       venueMapUrl: venueMapUrl || null,
@@ -163,7 +230,33 @@ function parseSessionForm(formData: FormData) {
       agenda: agenda || null,
       whoShouldAttend: whoShouldAttend || null,
     },
+    isWib,
+    wibTracks,
   } as const;
+}
+
+/** Replace a WIB session's track rows with the submitted set; capacity edits keep bookedCount. */
+async function syncWibTracks(
+  tx: Prisma.TransactionClient,
+  sessionId: string,
+  tracks: WibTrackInput[]
+) {
+  for (const t of tracks) {
+    await tx.sessionTrack.upsert({
+      where: { sessionId_track: { sessionId, track: t.track } },
+      update: {
+        capacity: t.capacity,
+        speakerName: t.speakerName,
+        speakerRole: t.speakerRole,
+        speakerPhotoUrl: t.speakerPhotoUrl,
+        speakerBio: t.speakerBio,
+        speakerProfileUrl: t.speakerProfileUrl,
+      },
+      create: { sessionId, ...t },
+    });
+  }
+  const keep = tracks.map((t) => t.track);
+  await tx.sessionTrack.deleteMany({ where: { sessionId, track: { notIn: keep } } });
 }
 
 export async function createSession(
@@ -175,7 +268,10 @@ export async function createSession(
   const parsed = parseSessionForm(formData);
   if ("error" in parsed) return { error: parsed.error };
 
-  await prisma.session.create({ data: { ...parsed.data, eventId, status: "open" } });
+  await prisma.$transaction(async (tx) => {
+    const session = await tx.session.create({ data: { ...parsed.data, eventId, status: "open" } });
+    if (parsed.isWib) await syncWibTracks(tx, session.id, parsed.wibTracks);
+  });
   revalidateEvent(eventId);
   return { success: true };
 }
@@ -190,7 +286,15 @@ export async function updateSession(
   const parsed = parseSessionForm(formData);
   if ("error" in parsed) return { error: parsed.error };
 
-  await prisma.session.update({ where: { id: sessionId }, data: parsed.data });
+  await prisma.$transaction(async (tx) => {
+    await tx.session.update({ where: { id: sessionId }, data: parsed.data });
+    if (parsed.isWib) {
+      await syncWibTracks(tx, sessionId, parsed.wibTracks);
+    } else {
+      // Club changed away from WIB (or never was): drop any leftover track rows.
+      await tx.sessionTrack.deleteMany({ where: { sessionId } });
+    }
+  });
   revalidateEvent(eventId);
   return { success: true };
 }
@@ -402,6 +506,8 @@ export async function manualBookingOverride(
   const sessionId = String(formData.get("sessionId") ?? "");
   const note = String(formData.get("note") ?? "").trim();
   const bypassTicketCheck = formData.get("bypassTicketCheck") === "on";
+  // WIB sessions require a track; the engine validates it and rejects a missing one.
+  const sessionTrackId = String(formData.get("sessionTrackId") ?? "") || undefined;
 
   if (!userId || !sessionId || !note) {
     return { error: "User, session, and a reason note are required." };
@@ -412,6 +518,7 @@ export async function manualBookingOverride(
       userId,
       eventId,
       sessionId,
+      sessionTrackId,
       bookingType: "self_selected",
       adminOverride: { adminUserId: admin.id!, note, bypassTicketCheck, bypassDeadline: true },
     });
@@ -443,6 +550,18 @@ export async function manualGroupBookingOverride(
 
   if (cohortSplits.length === 0 || !sessionId || !note) {
     return { error: "At least one group, a session, and a reason note are required." };
+  }
+
+  // WIB sessions need a per-student track choice, which a bulk booking can't express.
+  const targetSession = await prisma.session.findUnique({
+    where: { id: sessionId },
+    select: { club: true },
+  });
+  if (targetSession && isWibClub(targetSession.club)) {
+    return {
+      error:
+        "Group booking isn't supported for Women in Business sessions — book students individually so each gets a table track.",
+    };
   }
 
   const students = await prisma.user.findMany({
@@ -513,6 +632,7 @@ export async function adminCancelBooking(
  */
 async function recomputeEventCounters(tx: Prisma.TransactionClient, eventId: string) {
   await tx.session.updateMany({ where: { eventId }, data: { bookedCount: 0 } });
+  await tx.sessionTrack.updateMany({ where: { session: { eventId } }, data: { bookedCount: 0 } });
   await tx.eventTicketAllotment.updateMany({ where: { eventId }, data: { ticketsUsed: 0 } });
 
   const bySession = await tx.booking.groupBy({
@@ -523,6 +643,20 @@ async function recomputeEventCounters(tx: Prisma.TransactionClient, eventId: str
   for (const row of bySession) {
     await tx.session.update({
       where: { id: row.sessionId },
+      data: { bookedCount: row._count._all },
+    });
+  }
+
+  // Re-apply WIB per-track counts from the confirmed bookings that carry a track.
+  const byTrack = await tx.booking.groupBy({
+    by: ["sessionTrackId"],
+    where: { eventId, status: "confirmed", sessionTrackId: { not: null } },
+    _count: { _all: true },
+  });
+  for (const row of byTrack) {
+    if (!row.sessionTrackId) continue;
+    await tx.sessionTrack.update({
+      where: { id: row.sessionTrackId },
       data: { bookedCount: row._count._all },
     });
   }

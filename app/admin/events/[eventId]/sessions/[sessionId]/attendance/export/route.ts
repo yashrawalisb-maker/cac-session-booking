@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
+import { wibTrackLabel } from "@/lib/wibTracks";
 
 function csvEscape(value: string) {
   if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
@@ -23,13 +24,18 @@ export async function GET(
 
   const bookings = await prisma.booking.findMany({
     where: { sessionId, status: "confirmed" },
-    include: { user: true },
+    include: { user: true, sessionTrack: true },
     orderBy: { user: { name: "asc" } },
   });
 
-  const header = ["name", "pgp_id", "attendance"];
+  const header = ["name", "pgp_id", "table_track", "attendance"];
   const rows = bookings.map((b) =>
-    [b.user.name, b.user.pgpId, b.attended === null ? "" : b.attended ? "present" : "absent"]
+    [
+      b.user.name,
+      b.user.pgpId,
+      b.sessionTrack ? wibTrackLabel(b.sessionTrack.track) ?? "" : "",
+      b.attended === null ? "" : b.attended ? "present" : "absent",
+    ]
       .map((v) => csvEscape(String(v)))
       .join(",")
   );

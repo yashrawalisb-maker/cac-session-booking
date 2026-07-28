@@ -9,6 +9,7 @@ import { AttendanceTrackersDialog, type TrackerGrant } from "@/components/admin/
 import { DeleteSessionDialog } from "@/components/admin/delete-session-dialog";
 import { createSession, updateSession, cancelSession } from "@/app/admin/events/[eventId]/actions";
 import { clubShort } from "@/lib/clubs";
+import { effectiveSpeakers } from "@/lib/speakers";
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -29,6 +30,16 @@ export type SessionRow = {
   venueLocation: string | null;
   capacity: number;
   bookedCount: number;
+  speakers: unknown;
+  tracks: {
+    track: string;
+    capacity: number;
+    speakerName: string | null;
+    speakerRole: string | null;
+    speakerPhotoUrl: string | null;
+    speakerBio: string | null;
+    speakerProfileUrl: string | null;
+  }[];
   speakerProfileId: string | null;
   speakerDescription: string | null;
   status: string;
@@ -136,13 +147,16 @@ export function SessionsPanel({
                         venueName: s.venueName,
                         venueLocation: s.venueLocation ?? "",
                         capacity: s.capacity,
-                        speakerProfileId: s.speakerProfileId ?? "",
-                        speakerDescription: s.speakerDescription ?? "",
-                        speakerName: s.speakerName ?? "",
-                        speakerRole: s.speakerRole ?? "",
-                        speakerPhotoUrl: s.speakerPhotoUrl ?? "",
-                        speakerBio: s.speakerBio ?? "",
-                        speakerProfileUrl: s.speakerProfileUrl ?? "",
+                        speakers: effectiveSpeakers(s),
+                        wibTracks: s.tracks.map((t) => ({
+                          track: t.track,
+                          capacity: t.capacity,
+                          speakerName: t.speakerName ?? "",
+                          speakerRole: t.speakerRole ?? "",
+                          speakerPhotoUrl: t.speakerPhotoUrl ?? "",
+                          speakerBio: t.speakerBio ?? "",
+                          speakerProfileUrl: t.speakerProfileUrl ?? "",
+                        })),
                         venueDescription: s.venueDescription ?? "",
                         venuePhotoUrl: s.venuePhotoUrl ?? "",
                         venueMapUrl: s.venueMapUrl ?? "",

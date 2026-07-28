@@ -128,6 +128,10 @@ model Session {
 
   // Detail-page enrichment fields — all optional, purely additive. When empty the detail
   // page falls back to the fields above (speakerDescription etc.) or hides the section.
+  // `speakers` is the multi-speaker source of truth: a JSON array of
+  // { name, role, photoUrl, bio, profileUrl }. The flat speakerName/Role/… fields below are
+  // kept mirrored to the FIRST speaker so legacy readers (email, older sessions) still work.
+  speakers             Json?
   speakerName          String?       @map("speaker_name")
   speakerRole          String?       @map("speaker_role")
   speakerPhotoUrl      String?       @map("speaker_photo_url")
@@ -147,9 +151,38 @@ model Session {
   event             Event                    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   bookings          Booking[]
   attendanceGrants  SessionAttendanceGrant[]
+  tracks            SessionTrack[]
 
   @@index([eventId])
   @@map("sessions")
+}
+
+/**
+ * A "table track" under a Women in Business (club "wib") session — see lib/wibTracks.ts. Each
+ * track is a mini-session with its own capacity + speaker; a student books exactly one. Only WIB
+ * sessions have these rows; every other session has none and behaves exactly as before.
+ */
+model SessionTrack {
+  id          String @id @default(cuid())
+  sessionId   String @map("session_id")
+  track       String // stable value from lib/wibTracks.ts WIB_TRACKS (e.g. "finance")
+  capacity    Int
+  bookedCount Int    @default(0) @map("booked_count")
+
+  speakerName       String? @map("speaker_name")
+  speakerRole       String? @map("speaker_role")
+  speakerPhotoUrl   String? @map("speaker_photo_url")
+  speakerBio        String? @map("speaker_bio")
+  speakerProfileUrl String? @map("speaker_profile_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session  Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@unique([sessionId, track])
+  @@index([sessionId])
+  @@map("session_tracks")
 }
 
 /** Grants a non-admin user permission to mark attendance for one specific session. */
@@ -177,6 +210,8 @@ model Booking {
   bookingType   BookingType   @map("booking_type")
   status        BookingStatus @default(confirmed)
   bookedAt      DateTime      @default(now()) @map("booked_at")
+  // Which WIB table track this booking is for; null for every non-WIB booking.
+  sessionTrackId String?      @map("session_track_id")
   adminNote     String?       @map("admin_note")
   overriddenBy  String?       @map("overridden_by")
   overriddenAt  DateTime?     @map("overridden_at")
@@ -184,9 +219,10 @@ model Booking {
   attendanceMarkedBy   String?   @map("attendance_marked_by")
   attendanceMarkedAt   DateTime? @map("attendance_marked_at")
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event   Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event        Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  session      Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionTrack SessionTrack? @relation(fields: [sessionTrackId], references: [id], onDelete: SetNull)
 
   acknowledgmentLogs AcknowledgmentLog[]
 

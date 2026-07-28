@@ -9,6 +9,8 @@ import { hasAttendanceAccess } from "@/lib/attendance";
 import { AppShell } from "@/components/app-shell";
 import { SessionListFiltered, type FilterableSession } from "@/components/session-list-filtered";
 import { computeSessionStatus } from "@/lib/sessionStatus";
+import { effectiveSpeakers, speakersLabel } from "@/lib/speakers";
+import { isWibClub, wibTrackLabel, wibTrackOrder } from "@/lib/wibTracks";
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
@@ -49,7 +51,7 @@ export default async function EventDetailPage({
   if (!allotment) notFound();
 
   const [sessions, bookings, unreadUpdates, showAttendanceTab] = await Promise.all([
-    prisma.session.findMany({ where: { eventId }, orderBy: { startsAt: "asc" } }),
+    prisma.session.findMany({ where: { eventId }, include: { tracks: true }, orderBy: { startsAt: "asc" } }),
     prisma.booking.findMany({
       where: { userId: user.id!, eventId, status: "confirmed" },
       select: { sessionId: true, bookingType: true },
@@ -65,6 +67,17 @@ export default async function EventDetailPage({
   const filterableSessions: FilterableSession[] = sessions.map((s) => {
     const bookingType = bookingBySession.get(s.id);
     const seatsRemaining = Math.max(s.capacity - s.bookedCount, 0);
+    const wibTracks = isWibClub(s.club)
+      ? s.tracks
+          .slice()
+          .sort((a, b) => wibTrackOrder(a.track) - wibTrackOrder(b.track))
+          .map((t) => ({
+            id: t.id,
+            label: wibTrackLabel(t.track) ?? t.track,
+            speakerName: t.speakerName,
+            seatsRemaining: Math.max(t.capacity - t.bookedCount, 0),
+          }))
+      : undefined;
     return {
       sessionId: s.id,
       title: s.title,
@@ -73,10 +86,11 @@ export default async function EventDetailPage({
       timeLabel: `${DATE_FORMATTER.format(s.startsAt)}, ${TIME_FORMATTER.format(s.startsAt)} – ${TIME_FORMATTER.format(s.endsAt)}`,
       venueName: s.venueName,
       venueLocation: s.venueLocation,
-      speaker: s.speakerDescription,
+      speaker: speakersLabel(effectiveSpeakers(s)),
       club: s.club,
       seatsRemaining,
       capacity: s.capacity,
+      wibTracks,
       status: computeSessionStatus({
         bookingType,
         seatsRemaining,

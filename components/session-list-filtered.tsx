@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { SessionCard, type SessionCardStatus } from "@/components/session-card";
+import type { BookableTrack } from "@/components/wib-track-booking";
 import { clubShort } from "@/lib/clubs";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,7 @@ export type FilterableSession = {
   seatsRemaining: number;
   capacity: number;
   status: SessionCardStatus;
+  wibTracks?: BookableTrack[];
 };
 
 export function SessionListFiltered({
@@ -125,6 +127,7 @@ export function SessionListFiltered({
                     seatsRemaining={s.seatsRemaining}
                     capacity={s.capacity}
                     status={s.status}
+                    wibTracks={s.wibTracks}
                   />
                 ))}
             </div>
