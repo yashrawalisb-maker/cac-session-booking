@@ -12,6 +12,12 @@ export type FilterableSession = {
   description: string | null;
   dayLabel: string;
   timeLabel: string;
+  // Numeric bounds (epoch ms) for grouping concurrent sessions, plus time-only labels for the
+  // slot header. Formatted server-side so the timezone (IST) is consistent for every viewer.
+  startsAtMs: number;
+  endsAtMs: number;
+  startLabel: string;
+  endLabel: string;
   venueName: string;
   venueLocation: string | null;
   speaker: string | null;
@@ -21,6 +27,38 @@ export type FilterableSession = {
   status: SessionCardStatus;
   wibTracks?: BookableTrack[];
 };
+
+/**
+ * Group a day's sessions into time-slot rows: consecutive sessions whose times overlap land in the
+ * same row (the student can attend only one of them). Standard merge-overlapping-intervals — a
+ * session joins the current row if it starts before the row's running end, otherwise a new row
+ * starts. Sessions must already be scoped to one day.
+ */
+function groupIntoTimeRows(sessions: FilterableSession[]): FilterableSession[][] {
+  const sorted = [...sessions].sort((a, b) => a.startsAtMs - b.startsAtMs || a.endsAtMs - b.endsAtMs);
+  const rows: FilterableSession[][] = [];
+  let current: FilterableSession[] = [];
+  let runningEnd = -Infinity;
+  for (const s of sorted) {
+    if (current.length === 0 || s.startsAtMs < runningEnd) {
+      current.push(s);
+      runningEnd = Math.max(runningEnd, s.endsAtMs);
+    } else {
+      rows.push(current);
+      current = [s];
+      runningEnd = s.endsAtMs;
+    }
+  }
+  if (current.length > 0) rows.push(current);
+  return rows;
+}
+
+/** Slot label spanning the row: earliest start → latest end. */
+function rowTimeLabel(row: FilterableSession[]): string {
+  const start = row[0].startLabel; // row is sorted by start
+  const latest = row.reduce((m, s) => (s.endsAtMs > m.endsAtMs ? s : m), row[0]);
+  return `${start} – ${latest.endLabel}`;
+}
 
 export function SessionListFiltered({
   eventId,
@@ -106,33 +144,48 @@ export function SessionListFiltered({
           No sessions match the selected club(s).
         </p>
       ) : (
-        dayLabels.map((day) => (
-          <section key={day}>
-            <h2 className="mb-3 text-lg font-semibold tracking-tight">{day}</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered
-                .filter((s) => s.dayLabel === day)
-                .map((s) => (
-                  <SessionCard
-                    key={s.sessionId}
-                    eventId={eventId}
-                    sessionId={s.sessionId}
-                    title={s.title}
-                    description={s.description}
-                    timeLabel={s.timeLabel}
-                    venueName={s.venueName}
-                    venueLocation={s.venueLocation}
-                    speaker={s.speaker}
-                    clubName={clubShort(s.club)}
-                    seatsRemaining={s.seatsRemaining}
-                    capacity={s.capacity}
-                    status={s.status}
-                    wibTracks={s.wibTracks}
-                  />
+        dayLabels.map((day) => {
+          const rows = groupIntoTimeRows(filtered.filter((s) => s.dayLabel === day));
+          return (
+            <section key={day}>
+              <h2 className="mb-4 text-lg font-semibold tracking-tight">{day}</h2>
+              <div className="flex flex-col gap-6">
+                {rows.map((row, i) => (
+                  <div key={i} className="flex flex-col gap-2.5">
+                    <div className="flex flex-wrap items-center gap-2 border-l-2 border-primary/40 pl-2.5">
+                      <span className="text-sm font-semibold text-foreground">{rowTimeLabel(row)}</span>
+                      {row.length > 1 && (
+                        <span className="inline-flex items-center rounded-full bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning">
+                          {row.length} concurrent · pick one
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {row.map((s) => (
+                        <SessionCard
+                          key={s.sessionId}
+                          eventId={eventId}
+                          sessionId={s.sessionId}
+                          title={s.title}
+                          description={s.description}
+                          timeLabel={s.timeLabel}
+                          venueName={s.venueName}
+                          venueLocation={s.venueLocation}
+                          speaker={s.speaker}
+                          clubName={clubShort(s.club)}
+                          seatsRemaining={s.seatsRemaining}
+                          capacity={s.capacity}
+                          status={s.status}
+                          wibTracks={s.wibTracks}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))}
-            </div>
-          </section>
-        ))
+              </div>
+            </section>
+          );
+        })
       )}
     </div>
   );
