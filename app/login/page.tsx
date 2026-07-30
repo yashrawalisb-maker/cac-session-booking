@@ -29,8 +29,7 @@ export default async function LoginPage({
               One Club Conclave 2026
             </h1>
             <p className="mt-4 max-w-sm text-sm text-white/70">
-              The Career Advancement Council&apos;s flagship recruiting conclave — book your
-              workshops, panels, and recruiter sessions in one place.
+              The Biggest Professional Networking Event of ISB
             </p>
           </div>
         </div>
