@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Ticket, Users, LogOut, Menu, X, Bell, Megaphone, ClipboardCheck } from "lucide-react";
+import { LayoutDashboard, Ticket, Users, LogOut, Menu, X, Bell, Megaphone, ClipboardCheck, CalendarDays } from "lucide-react";
 import { IsbLogo } from "@/components/isb-logo";
 import { logout } from "@/app/logout-action";
 import { cn } from "@/lib/utils";
@@ -34,6 +34,12 @@ const STUDENT_NAV_BASE: NavItem[] = [
     icon: Megaphone,
     isActive: (p) => p.startsWith("/updates"),
   },
+  {
+    label: "OCC Calendar",
+    href: "/calendar",
+    icon: CalendarDays,
+    isActive: (p) => p.startsWith("/calendar"),
+  },
 ];
 
 const ATTENDANCE_NAV_ITEM: NavItem = {
@@ -61,6 +67,12 @@ const ADMIN_NAV: NavItem[] = [
     href: "/admin/announcements",
     icon: Megaphone,
     isActive: (p) => p.startsWith("/admin/announcements"),
+  },
+  {
+    label: "OCC Calendar",
+    href: "/calendar",
+    icon: CalendarDays,
+    isActive: (p) => p.startsWith("/calendar"),
   },
 ];
 
