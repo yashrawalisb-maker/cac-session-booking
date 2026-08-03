@@ -377,6 +377,7 @@ export default async function SessionDetailPage({
             <SessionBookPanel
               eventId={eventId}
               sessionId={sessionId}
+              sessionTitle={session.title}
               status={status}
               wibTracks={isWib ? bookableTracks : undefined}
             />

@@ -1,14 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
 import Link from "next/link";
 import { Clock, MapPin, User, Users, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { bookSessionAction, type BookActionState } from "@/app/events/[eventId]/actions";
 import { AddToCalendarLink } from "@/components/add-to-calendar-link";
 import { WibTrackBooking, type BookableTrack } from "@/components/wib-track-booking";
+import { ConfirmBookingDialog } from "@/components/confirm-booking-dialog";
 
 export type SessionCardStatus =
   | "bookable"
@@ -47,13 +46,9 @@ export function SessionCard({
   status: SessionCardStatus;
   wibTracks?: BookableTrack[];
 }) {
-  const boundAction = bookSessionAction.bind(null, eventId, sessionId);
-  const [state, formAction, pending] = useActionState<BookActionState, FormData>(
-    boundAction,
-    undefined
-  );
-
-  const effectiveStatus: SessionCardStatus = state?.success ? "booked" : status;
+  // Booking happens inside ConfirmBookingDialog / WibTrackBooking (each owns its own action state);
+  // this component just reflects the server `status`, updated via revalidation after a booking.
+  const effectiveStatus: SessionCardStatus = status;
   const isBooked = effectiveStatus === "booked" || effectiveStatus === "booked_auto";
 
   return (
@@ -108,22 +103,12 @@ export function SessionCard({
           View details
         </Link>
 
-        {state?.error && (
-          <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">
-            {state.error}
-          </p>
-        )}
-
         <div className="mt-auto pt-1">
           {effectiveStatus === "bookable" ? (
             wibTracks && wibTracks.length > 0 ? (
               <WibTrackBooking eventId={eventId} sessionId={sessionId} tracks={wibTracks} />
             ) : (
-              <form action={formAction}>
-                <Button type="submit" disabled={pending} className="w-full">
-                  {pending ? "Booking…" : "Book this slot"}
-                </Button>
-              </form>
+              <ConfirmBookingDialog eventId={eventId} sessionId={sessionId} sessionTitle={title} />
             )
           ) : isBooked ? (
             <div className="flex flex-col gap-2">

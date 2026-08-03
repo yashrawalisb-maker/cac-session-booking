@@ -108,6 +108,10 @@ export function WibTrackBooking({
             </p>
           )}
 
+          <p className="text-xs text-muted-foreground">
+            This booking is final — it can&apos;t be changed or cancelled once confirmed.
+          </p>
+
           <DialogFooter>
             <Button type="submit" disabled={pending || !selected}>
               {pending ? "Booking…" : "Confirm booking"}
