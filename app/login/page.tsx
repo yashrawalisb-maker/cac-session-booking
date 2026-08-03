@@ -26,7 +26,7 @@ export default async function LoginPage({
           <div>
             <p className="text-sm font-medium text-brand-mint">Welcome to</p>
             <h1 className="mt-2 text-4xl font-semibold leading-[1.1] sm:text-5xl">
-              One Club Conclave 2026
+              One Club Conclave 2027
             </h1>
             <p className="mt-4 max-w-sm text-sm text-white/70">
               The Biggest Professional Networking Event of ISB
