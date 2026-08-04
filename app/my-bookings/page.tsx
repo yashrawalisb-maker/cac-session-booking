@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { isPast } from "@/lib/time";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { hasAttendanceAccess } from "@/lib/attendance";
+import { wibTrackLabel } from "@/lib/wibTracks";
 import { AddToCalendarLink } from "@/components/add-to-calendar-link";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +26,7 @@ type BookingWithRefs = Awaited<ReturnType<typeof loadBookings>>[number];
 async function loadBookings(userId: string) {
   return prisma.booking.findMany({
     where: { userId, status: { in: ["confirmed", "cancelled_by_admin"] } },
-    include: { session: true, event: true },
+    include: { session: true, event: true, sessionTrack: true },
     orderBy: { session: { startsAt: "asc" } },
   });
 }
@@ -65,7 +66,10 @@ function BookingRow({ booking }: { booking: BookingWithRefs }) {
               </span>
             )}
           </div>
-          <p className="mt-0.5 text-xs text-muted-foreground">{event.name}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {event.name}
+            {booking.sessionTrack && ` · Table: ${wibTrackLabel(booking.sessionTrack.track)}`}
+          </p>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <Clock className="size-3.5" />
