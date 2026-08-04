@@ -120,8 +120,25 @@ export default async function SessionDetailPage({
   }));
 
   const keyTakeaways = session.keyTakeaways?.trim();
-  const agenda = session.agenda?.trim();
-  const whoShouldAttend = session.whoShouldAttend?.trim();
+
+  const overviewCard = (
+    <div className="rounded-xl border border-border bg-card p-5">
+      <h2 className="mb-2 text-base font-semibold">About the event</h2>
+      {session.description ? (
+        <p className="mb-4 text-sm whitespace-pre-line text-muted-foreground">
+          {session.description}
+        </p>
+      ) : (
+        <p className="mb-4 text-sm text-muted-foreground">No description added yet.</p>
+      )}
+      {keyTakeaways && (
+        <>
+          <h3 className="mb-2 text-sm font-semibold">Key takeaways</h3>
+          <Bullets text={keyTakeaways} />
+        </>
+      )}
+    </div>
+  );
 
   return (
     <AppShell
@@ -174,38 +191,19 @@ export default async function SessionDetailPage({
         {/* Main content */}
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="flex flex-col gap-4 lg:col-span-2">
-            <Tabs defaultValue="overview">
-              <TabsList>
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="speaker">{isWib ? "Tracks" : "About speaker"}</TabsTrigger>
-                <TabsTrigger value="agenda">Agenda</TabsTrigger>
-                <TabsTrigger value="attend">Who should attend</TabsTrigger>
-              </TabsList>
+            {isWib ? (
+              <Tabs defaultValue="overview">
+                <TabsList>
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="speaker">Tracks</TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="overview" className="flex flex-col gap-6">
-                <div className="rounded-xl border border-border bg-card p-5">
-                  <h2 className="mb-2 text-base font-semibold">About the event</h2>
-                  {session.description ? (
-                    <p className="mb-4 text-sm whitespace-pre-line text-muted-foreground">
-                      {session.description}
-                    </p>
-                  ) : (
-                    <p className="mb-4 text-sm text-muted-foreground">No description added yet.</p>
-                  )}
-                  {keyTakeaways && (
-                    <>
-                      <h3 className="mb-2 text-sm font-semibold">Key takeaways</h3>
-                      <Bullets text={keyTakeaways} />
-                    </>
-                  )}
-                </div>
-              </TabsContent>
+                <TabsContent value="overview" className="flex flex-col gap-6">
+                  {overviewCard}
+                </TabsContent>
 
-              <TabsContent value="speaker" className="rounded-xl border border-border bg-card p-5">
-                <h2 className="mb-3 text-base font-semibold">
-                  {isWib ? "Table tracks" : `About the speaker${speakers.length > 1 ? "s" : ""}`}
-                </h2>
-                {isWib ? (
+                <TabsContent value="speaker" className="rounded-xl border border-border bg-card p-5">
+                  <h2 className="mb-3 text-base font-semibold">Table tracks</h2>
                   <div className="flex flex-col gap-5">
                     {sortedTracks.map((t) => {
                       const seats = Math.max(t.capacity - t.bookedCount, 0);
@@ -250,63 +248,11 @@ export default async function SessionDetailPage({
                       );
                     })}
                   </div>
-                ) : hasSpeaker ? (
-                  <div className="flex flex-col gap-6">
-                    {speakers.map((sp, i) => (
-                      <div key={i} className="flex flex-col gap-4 sm:flex-row">
-                        <SpeakerAvatar name={sp.name} photoUrl={sp.photoUrl} placeholder={false} size={64} />
-                        <div className="flex flex-1 flex-col gap-1">
-                          <p className="font-semibold text-foreground">{sp.name}</p>
-                          {sp.role && <p className="text-sm text-muted-foreground">{sp.role}</p>}
-                          {sp.bio && (
-                            <p className="mt-2 text-sm whitespace-pre-line text-muted-foreground">{sp.bio}</p>
-                          )}
-                          {sp.profileUrl && (
-                            <a
-                              href={sp.profileUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-2 inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-                            >
-                              View full profile
-                              <ExternalLink className="size-3.5" />
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-4 sm:flex-row">
-                    <SpeakerAvatar name="Speaker" photoUrl={null} placeholder size={64} />
-                    <div className="flex flex-1 flex-col gap-1">
-                      <p className="font-semibold text-foreground">To be announced</p>
-                      <p className="text-sm text-muted-foreground">
-                        Speaker details will be shared here soon.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="agenda" className="rounded-xl border border-border bg-card p-5">
-                <h2 className="mb-3 text-base font-semibold">Agenda</h2>
-                {agenda ? (
-                  <p className="text-sm whitespace-pre-line text-foreground">{agenda}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No agenda has been added yet.</p>
-                )}
-              </TabsContent>
-
-              <TabsContent value="attend" className="rounded-xl border border-border bg-card p-5">
-                <h2 className="mb-3 text-base font-semibold">Who should attend</h2>
-                {whoShouldAttend ? (
-                  <p className="text-sm whitespace-pre-line text-foreground">{whoShouldAttend}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No guidance has been added yet.</p>
-                )}
-              </TabsContent>
-            </Tabs>
+                </TabsContent>
+              </Tabs>
+            ) : (
+              overviewCard
+            )}
           </div>
 
           {/* Sidebar */}
