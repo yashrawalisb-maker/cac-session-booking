@@ -69,9 +69,8 @@ export function effectiveSpeakers(session: LegacySpeakerFields): SessionSpeaker[
   ];
 }
 
-/** Compact label for cards/lists: "Ekta Parashar" or "Ekta Parashar +2". */
+/** Label for cards/lists: "Ekta Parashar" or "Ekta Parashar, Rohan Mehta". */
 export function speakersLabel(speakers: SessionSpeaker[]): string | null {
   if (speakers.length === 0) return null;
-  const [first, ...rest] = speakers;
-  return rest.length > 0 ? `${first.name} +${rest.length}` : first.name;
+  return speakers.map((s) => s.name).join(", ");
 }
