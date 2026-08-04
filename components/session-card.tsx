@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { AddToCalendarLink } from "@/components/add-to-calendar-link";
-import { WibTrackBooking, type BookableTrack } from "@/components/wib-track-booking";
-import { ConfirmBookingDialog } from "@/components/confirm-booking-dialog";
+import { WibTrackPicker, type BookableTrack } from "@/components/wib-track-booking";
 
 export type SessionCardStatus =
   | "bookable"
@@ -31,6 +30,13 @@ export function SessionCard({
   capacity,
   status,
   wibTracks,
+  inCart,
+  cartTrackLabel,
+  addDisabled,
+  addDisabledReason,
+  onAdd,
+  onAddWibTrack,
+  onRemove,
 }: {
   eventId: string;
   sessionId: string;
@@ -45,14 +51,19 @@ export function SessionCard({
   capacity: number;
   status: SessionCardStatus;
   wibTracks?: BookableTrack[];
+  // Cart wiring — the card is presentational; the parent owns the cart state.
+  inCart: boolean;
+  cartTrackLabel?: string | null;
+  addDisabled?: boolean;
+  addDisabledReason?: string;
+  onAdd: () => void;
+  onAddWibTrack: (trackId: string, trackLabel: string) => void;
+  onRemove: () => void;
 }) {
-  // Booking happens inside ConfirmBookingDialog / WibTrackBooking (each owns its own action state);
-  // this component just reflects the server `status`, updated via revalidation after a booking.
-  const effectiveStatus: SessionCardStatus = status;
-  const isBooked = effectiveStatus === "booked" || effectiveStatus === "booked_auto";
+  const isBooked = status === "booked" || status === "booked_auto";
 
   return (
-    <Card className={cn("flex flex-col", isBooked && "ring-2 ring-success/40")}>
+    <Card className={cn("flex flex-col", (isBooked || inCart) && "ring-2 ring-primary/30")}>
       <CardContent className="flex flex-1 flex-col gap-3">
         <div className="flex items-start justify-between gap-2">
           <Link
@@ -61,7 +72,7 @@ export function SessionCard({
           >
             {title}
           </Link>
-          <StatusBadge status={effectiveStatus} seatsRemaining={seatsRemaining} />
+          <StatusBadge status={status} seatsRemaining={seatsRemaining} />
         </div>
 
         {clubName && (
@@ -104,25 +115,42 @@ export function SessionCard({
         </Link>
 
         <div className="mt-auto pt-1">
-          {effectiveStatus === "bookable" ? (
-            wibTracks && wibTracks.length > 0 ? (
-              <WibTrackBooking eventId={eventId} sessionId={sessionId} tracks={wibTracks} />
+          {status === "bookable" ? (
+            inCart ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-center gap-2 rounded-lg bg-brand-navy-tint py-2 text-sm font-medium text-primary">
+                  <CheckCircle2 className="size-4" />
+                  In your plan{cartTrackLabel ? ` · ${cartTrackLabel}` : ""}
+                </div>
+                <Button variant="outline" size="sm" onClick={onRemove} className="w-full">
+                  Remove
+                </Button>
+              </div>
+            ) : wibTracks && wibTracks.length > 0 ? (
+              <WibTrackPicker
+                tracks={wibTracks}
+                disabled={addDisabled}
+                disabledReason={addDisabledReason}
+                onAdd={onAddWibTrack}
+              />
             ) : (
-              <ConfirmBookingDialog eventId={eventId} sessionId={sessionId} sessionTitle={title} />
+              <Button onClick={onAdd} disabled={addDisabled} title={addDisabledReason} className="w-full">
+                Add to plan
+              </Button>
             )
           ) : isBooked ? (
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-center gap-2 rounded-lg bg-success-bg py-2 text-sm font-medium text-success">
                 <CheckCircle2 className="size-4" />
-                {effectiveStatus === "booked_auto" ? "Auto-assigned" : "Booked"}
+                {status === "booked_auto" ? "Auto-assigned" : "Booked"}
               </div>
               <AddToCalendarLink eventId={eventId} sessionId={sessionId} className="w-full" />
             </div>
           ) : (
             <Button variant="outline" disabled className="w-full">
-              {effectiveStatus === "full"
+              {status === "full"
                 ? "Full"
-                : effectiveStatus === "no_tickets"
+                : status === "no_tickets"
                   ? "No tickets remaining"
                   : "Booking closed"}
             </Button>

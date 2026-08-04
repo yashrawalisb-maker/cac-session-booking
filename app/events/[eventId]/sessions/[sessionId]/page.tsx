@@ -84,14 +84,22 @@ export default async function SessionDetailPage({
   });
   if (!allotment) notFound();
 
-  const [myBooking, unreadUpdates, showAttendanceTab] = await Promise.all([
+  const [myBooking, otherBookings, unreadUpdates, showAttendanceTab] = await Promise.all([
     prisma.booking.findUnique({
       where: { userId_sessionId: { userId: user.id!, sessionId } },
       select: { bookingType: true, status: true },
     }),
+    prisma.booking.findMany({
+      where: { userId: user.id!, eventId, status: "confirmed", sessionId: { not: sessionId } },
+      select: { session: { select: { startsAt: true, endsAt: true } } },
+    }),
     hasUnreadAnnouncements(user.id!),
     hasAttendanceAccess(user.id!),
   ]);
+  const occupied = otherBookings.map((b) => ({
+    startsAtMs: b.session.startsAt.getTime(),
+    endsAtMs: b.session.endsAt.getTime(),
+  }));
 
   const deadlinePassed = isPast(event.bookingDeadline);
   const ticketsRemaining = allotment.ticketsAllotted - allotment.ticketsUsed;
@@ -324,8 +332,14 @@ export default async function SessionDetailPage({
               eventId={eventId}
               sessionId={sessionId}
               sessionTitle={session.title}
+              timeLabel={`${DATE_FORMATTER.format(session.startsAt)}, ${TIME_FORMATTER.format(session.startsAt)} – ${TIME_FORMATTER.format(session.endsAt)}`}
+              startsAtMs={session.startsAt.getTime()}
+              endsAtMs={session.endsAt.getTime()}
               status={status}
               wibTracks={isWib ? bookableTracks : undefined}
+              ticketsRemaining={ticketsRemaining}
+              overlapCheckEnabled={event.overlapCheckEnabled}
+              occupied={occupied}
             />
           </div>
         </div>
