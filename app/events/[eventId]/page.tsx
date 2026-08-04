@@ -7,6 +7,7 @@ import { isPast } from "@/lib/time";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { hasAttendanceAccess } from "@/lib/attendance";
 import { AppShell } from "@/components/app-shell";
+import { LaunchingSoon } from "@/components/launching-soon";
 import { SessionListFiltered, type FilterableSession } from "@/components/session-list-filtered";
 import { computeSessionStatus } from "@/lib/sessionStatus";
 import { effectiveSpeakers, speakersLabel } from "@/lib/speakers";
@@ -43,7 +44,25 @@ export default async function EventDetailPage({
   const user = await requireUser();
 
   const event = await prisma.event.findUnique({ where: { id: eventId } });
-  if (!event || event.status !== "published") notFound();
+  if (!event) notFound();
+
+  if (event.status !== "published") {
+    const [unreadUpdates, showAttendanceTab] = await Promise.all([
+      hasUnreadAnnouncements(user.id!),
+      hasAttendanceAccess(user.id!),
+    ]);
+    return (
+      <AppShell
+        variant="student"
+        userName={user.name ?? user.email ?? ""}
+        userSubtitle={user.email ?? undefined}
+        unreadUpdates={unreadUpdates}
+        showAttendanceTab={showAttendanceTab}
+      >
+        <LaunchingSoon />
+      </AppShell>
+    );
+  }
 
   const allotment = await prisma.eventTicketAllotment.findUnique({
     where: { eventId_userId: { eventId, userId: user.id! } },

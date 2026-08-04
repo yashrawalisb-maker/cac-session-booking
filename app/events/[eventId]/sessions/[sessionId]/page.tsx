@@ -12,6 +12,7 @@ import { isWibClub, wibTrackLabel, wibTrackOrder } from "@/lib/wibTracks";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { hasAttendanceAccess } from "@/lib/attendance";
 import { AppShell } from "@/components/app-shell";
+import { LaunchingSoon } from "@/components/launching-soon";
 import { SessionBookPanel } from "@/components/session-book-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -71,7 +72,25 @@ export default async function SessionDetailPage({
   const user = await requireUser();
 
   const event = await prisma.event.findUnique({ where: { id: eventId } });
-  if (!event || event.status !== "published") notFound();
+  if (!event) notFound();
+
+  if (event.status !== "published") {
+    const [unreadUpdates, showAttendanceTab] = await Promise.all([
+      hasUnreadAnnouncements(user.id!),
+      hasAttendanceAccess(user.id!),
+    ]);
+    return (
+      <AppShell
+        variant="student"
+        userName={user.name ?? user.email ?? ""}
+        userSubtitle={user.email ?? undefined}
+        unreadUpdates={unreadUpdates}
+        showAttendanceTab={showAttendanceTab}
+      >
+        <LaunchingSoon />
+      </AppShell>
+    );
+  }
 
   const session = await prisma.session.findUnique({
     where: { id: sessionId },
