@@ -41,13 +41,13 @@ export function BookingCartBar({
 
   if (items.length === 0) return null;
 
-  // Students must confirm at least 2 sessions at once (the ticket cap already enforces the max of 3).
-  const MIN_REQUIRED = 2;
-  const belowMin = items.length < MIN_REQUIRED;
-  const moreNeeded = MIN_REQUIRED - items.length;
-  // A student with only 1 ticket can never reach the minimum — say so plainly instead of a
-  // misleading "add more" nudge they have no room left to act on.
-  const cannotReachMin = ticketsRemaining < MIN_REQUIRED;
+  // Every student should end up with (ticketsAllotted - 1) or ticketsAllotted sessions total.
+  // ticketsRemaining already reflects any tickets an admin has already spent on their behalf
+  // (e.g. the mandatory Keynote, a WIB table assignment), so the number of *new* picks required
+  // shrinks accordingly — someone with 2 of 4 tickets already used only needs 1 more, not 2.
+  const minRequired = Math.max(0, ticketsRemaining - 1);
+  const belowMin = items.length < minRequired;
+  const moreNeeded = minRequired - items.length;
 
   function confirm() {
     setError(null);
@@ -77,9 +77,7 @@ export function BookingCartBar({
         </span>
         {belowMin && (
           <span className="text-xs font-medium text-warning">
-            {cannotReachMin
-              ? "You need at least 2 tickets to confirm bookings"
-              : `Add ${moreNeeded} more session${moreNeeded > 1 ? "s" : ""} to confirm`}
+            Add {moreNeeded} more session{moreNeeded > 1 ? "s" : ""} to confirm
           </span>
         )}
         <Dialog open={open} onOpenChange={setOpen}>
@@ -90,9 +88,7 @@ export function BookingCartBar({
                 disabled={belowMin}
                 title={
                   belowMin
-                    ? cannotReachMin
-                      ? "You need at least 2 tickets to confirm bookings"
-                      : `Add at least ${MIN_REQUIRED} sessions to your plan before confirming`
+                    ? `Add at least ${minRequired} session${minRequired > 1 ? "s" : ""} to your plan before confirming`
                     : undefined
                 }
               >
