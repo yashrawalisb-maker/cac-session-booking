@@ -144,7 +144,12 @@ export default async function EventDetailPage({
           </div>
         </div>
 
-        <SessionListFiltered eventId={event.id} sessions={filterableSessions} />
+        <SessionListFiltered
+          eventId={event.id}
+          sessions={filterableSessions}
+          ticketsRemaining={ticketsRemaining}
+          overlapCheckEnabled={event.overlapCheckEnabled}
+        />
       </div>
     </AppShell>
   );
