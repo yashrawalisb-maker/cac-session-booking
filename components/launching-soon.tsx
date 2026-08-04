@@ -9,8 +9,8 @@ export function LaunchingSoon() {
     <Card>
       <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
         <Rocket className="size-8 text-muted-foreground" />
-        <h1 className="text-xl font-semibold tracking-tight">Launching Soon!</h1>
-        <p className="text-sm text-muted-foreground">Stay Tuned!</p>
+        <h1 className="text-xl font-semibold tracking-tight">Will be live at 8:00PM</h1>
+        <p className="text-sm text-muted-foreground">Stay tuned!</p>
         <Button render={<Link href="/dashboard" />} className="mt-2">
           Back to dashboard
         </Button>
