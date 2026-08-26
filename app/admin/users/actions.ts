@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { parseCsvWithHeader } from "@/lib/csv";
 import { isCohortSplitValue } from "@/lib/cohortSplits";
+import { parseSeatingWorkbook } from "@/lib/seating";
 
 export type ActionState = { error?: string; success?: boolean; message?: string } | undefined;
 
@@ -135,4 +136,58 @@ export async function importUsersCsv(_prevState: ActionState, formData: FormData
     return { error: `Created ${created} user(s). Errors:\n${errors.join("\n")}` };
   }
   return { success: true, message: `Created ${created} user(s).` };
+}
+
+/**
+ * Bulk-updates existing users' venue seat number from an admin-provided seating-chart workbook
+ * (e.g. an "Assignment List" sheet with PGID + Seat No. columns), matched by PGID. Never creates
+ * users — a PGID in the file with no matching user is reported, not silently ignored. Each row is
+ * its own `updateMany` call (not one big interactive transaction) per the bulk-write gotcha.
+ */
+export async function importSeatingXlsx(_prevState: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAdmin();
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { error: "Choose an .xlsx file." };
+
+  const buffer = await file.arrayBuffer();
+  const parsed = await parseSeatingWorkbook(buffer);
+  if ("headerError" in parsed) return { error: parsed.headerError };
+
+  const { rows, errors: rowErrors } = parsed;
+  const errors = rowErrors.map((e) => `Row ${e.row}: ${e.error}`);
+
+  // Catch in-file duplicate PGIDs before hitting the DB.
+  const seenPgpIds = new Map<string, number>();
+  const deduped: typeof rows = [];
+  for (const r of rows) {
+    const key = r.pgpId.toLowerCase();
+    if (seenPgpIds.has(key)) {
+      errors.push(`Row ${r.row}: duplicate PGID also seen on row ${seenPgpIds.get(key)}`);
+      continue;
+    }
+    seenPgpIds.set(key, r.row);
+    deduped.push(r);
+  }
+
+  const existingUsers = await prisma.user.findMany({ select: { pgpId: true } });
+  const existingPgpIds = new Set(existingUsers.map((u) => u.pgpId.toLowerCase()));
+
+  let updated = 0;
+  for (const r of deduped) {
+    if (!existingPgpIds.has(r.pgpId.toLowerCase())) {
+      errors.push(`Row ${r.row}: no user found with PGID ${r.pgpId}`);
+      continue;
+    }
+    await prisma.user.updateMany({
+      where: { pgpId: { equals: r.pgpId, mode: "insensitive" } },
+      data: { seatNumber: r.seatNumber },
+    });
+    updated++;
+  }
+
+  revalidatePath("/admin/users");
+  if (errors.length > 0) {
+    return { error: `Updated ${updated} seat number(s). Errors:\n${errors.join("\n")}` };
+  }
+  return { success: true, message: `Updated ${updated} seat number(s).` };
 }

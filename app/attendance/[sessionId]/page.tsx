@@ -84,6 +84,7 @@ export default async function AttendanceSessionPage({
             name: b.user.name,
             isbEmail: b.user.isbEmail,
             section: b.user.section,
+            seatNumber: b.user.seatNumber,
             attended: b.attended,
           }))}
         />

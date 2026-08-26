@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { NewUserDialog } from "@/components/admin/new-user-dialog";
 import { UsersCsvUpload } from "@/components/admin/users-csv-upload";
+import { SeatingXlsxUpload } from "@/components/admin/seating-xlsx-upload";
 
 export default async function AdminUsersPage() {
   const users = await prisma.user.findMany({ orderBy: { name: "asc" } });
@@ -18,6 +19,7 @@ export default async function AdminUsersPage() {
       </div>
 
       <UsersCsvUpload />
+      <SeatingXlsxUpload />
 
       <div className="overflow-x-auto rounded-lg border border-border">
         <Table>
@@ -29,6 +31,7 @@ export default async function AdminUsersPage() {
               <TableHead>Section</TableHead>
               <TableHead>Study group</TableHead>
               <TableHead>Cohort split</TableHead>
+              <TableHead>Seat</TableHead>
               <TableHead>Role</TableHead>
             </TableRow>
           </TableHeader>
@@ -41,6 +44,7 @@ export default async function AdminUsersPage() {
                 <TableCell>{u.section ?? "—"}</TableCell>
                 <TableCell>{u.studyGroup ?? "—"}</TableCell>
                 <TableCell>{u.cohortSplit ?? "—"}</TableCell>
+                <TableCell>{u.seatNumber ?? "—"}</TableCell>
                 <TableCell>
                   {u.isAdmin ? <Badge>Admin</Badge> : <Badge variant="outline">User</Badge>}
                 </TableCell>

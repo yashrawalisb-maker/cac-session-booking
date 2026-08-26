@@ -12,6 +12,7 @@ export type AttendanceRow = {
   name: string;
   isbEmail: string;
   section: string | null;
+  seatNumber: string | null;
   attended: boolean | null;
 };
 
@@ -33,7 +34,10 @@ export function AttendanceMarker({
     const q = query.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter(
-      (r) => r.name.toLowerCase().includes(q) || r.isbEmail.toLowerCase().includes(q)
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.isbEmail.toLowerCase().includes(q) ||
+        (r.seatNumber?.toLowerCase().includes(q) ?? false)
     );
   }, [query, rows]);
 
@@ -61,7 +65,7 @@ export function AttendanceMarker({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name or email…"
+            placeholder="Search by name, email, or seat…"
             className="pl-9"
           />
         </div>
@@ -80,12 +84,19 @@ export function AttendanceMarker({
           const busy = pendingId === r.bookingId;
           return (
             <div key={r.bookingId} className="flex items-center justify-between gap-3 px-4 py-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {r.name}
-                  {r.section && <span className="ml-1.5 text-xs text-muted-foreground">({r.section})</span>}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">{r.isbEmail}</p>
+              <div className="flex min-w-0 items-center gap-3">
+                {r.seatNumber && (
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-brand-navy-tint text-sm font-semibold text-primary">
+                    {r.seatNumber}
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {r.name}
+                    {r.section && <span className="ml-1.5 text-xs text-muted-foreground">({r.section})</span>}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">{r.isbEmail}</p>
+                </div>
               </div>
               <div className="flex shrink-0 gap-1.5">
                 <Button
