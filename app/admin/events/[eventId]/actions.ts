@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { bookSessionForUser, attemptBooking, cancelBooking, BookingError } from "@/lib/booking";
 import { sendAcknowledgmentEmail } from "@/lib/email";
 import { parseCsvWithHeader } from "@/lib/csv";
+import { parseSeatingWorkbook } from "@/lib/seating";
 import { isClubValue } from "@/lib/clubs";
 import { isCohortSplitValue } from "@/lib/cohortSplits";
 import { parseIstDateTime } from "@/lib/time";
@@ -346,6 +347,70 @@ export async function deleteSession(
 
   revalidateEvent(eventId);
   return { success: true };
+}
+
+/**
+ * Bulk-updates seat numbers for THIS session's confirmed bookings from an admin-provided
+ * seating-chart workbook (e.g. an "Assignment List" sheet with PGID + Seat No. columns), matched
+ * by PGID against confirmed bookings for `sessionId` only — a PGID with no confirmed booking for
+ * this session is reported, not silently ignored (this also means the chart should be uploaded
+ * once attendees have actually booked, not before). Each row is its own `update` call (not one
+ * big interactive transaction) per the bulk-write gotcha; per-session booking counts are bounded
+ * by that session's capacity, well under the roster-wide scale that gotcha is about.
+ */
+export async function importSessionSeatingXlsx(
+  eventId: string,
+  sessionId: string,
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  await requireAdmin();
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { error: "Choose an .xlsx file." };
+
+  const buffer = await file.arrayBuffer();
+  const parsed = await parseSeatingWorkbook(buffer);
+  if ("headerError" in parsed) return { error: parsed.headerError };
+
+  const { rows, errors: rowErrors } = parsed;
+  const errors = rowErrors.map((e) => `Row ${e.row}: ${e.error}`);
+
+  // Catch in-file duplicate PGIDs before hitting the DB.
+  const seenPgpIds = new Map<string, number>();
+  const deduped: typeof rows = [];
+  for (const r of rows) {
+    const key = r.pgpId.toLowerCase();
+    if (seenPgpIds.has(key)) {
+      errors.push(`Row ${r.row}: duplicate PGID also seen on row ${seenPgpIds.get(key)}`);
+      continue;
+    }
+    seenPgpIds.set(key, r.row);
+    deduped.push(r);
+  }
+
+  const bookings = await prisma.booking.findMany({
+    where: { sessionId, status: "confirmed" },
+    select: { id: true, user: { select: { pgpId: true } } },
+  });
+  const bookingIdByPgp = new Map(bookings.map((b) => [b.user.pgpId.toLowerCase(), b.id]));
+
+  let updated = 0;
+  for (const r of deduped) {
+    const bookingId = bookingIdByPgp.get(r.pgpId.toLowerCase());
+    if (!bookingId) {
+      errors.push(`Row ${r.row}: no confirmed booking for this session with PGID ${r.pgpId}`);
+      continue;
+    }
+    await prisma.booking.update({ where: { id: bookingId }, data: { seatNumber: r.seatNumber } });
+    updated++;
+  }
+
+  revalidateEvent(eventId);
+  revalidatePath(`/attendance/${sessionId}`);
+  if (errors.length > 0) {
+    return { error: `Updated ${updated} seat number(s). Errors:\n${errors.join("\n")}` };
+  }
+  return { success: true, message: `Updated ${updated} seat number(s).` };
 }
 
 // --- Ticket allotments ---
