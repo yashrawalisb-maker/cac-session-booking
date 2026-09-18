@@ -78,7 +78,7 @@ export function AttendanceMarker({
     setState((s) => ({ ...s, [bookingId]: next }));
     setPendingId(bookingId);
     startTransition(async () => {
-      const res = await markAttendance(sessionId, bookingId, next ?? false);
+      const res = await markAttendance(sessionId, bookingId, next);
       if (res.error) {
         // Revert on failure.
         setState((s) => ({ ...s, [bookingId]: prev }));

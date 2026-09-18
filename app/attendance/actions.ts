@@ -8,7 +8,7 @@ import { canMarkAttendance } from "@/lib/attendance";
 export async function markAttendance(
   sessionId: string,
   bookingId: string,
-  attended: boolean
+  attended: boolean | null
 ): Promise<{ error?: string }> {
   const user = await requireUser();
 
@@ -22,7 +22,12 @@ export async function markAttendance(
 
   await prisma.booking.update({
     where: { id: bookingId },
-    data: { attended, attendanceMarkedBy: user.id!, attendanceMarkedAt: new Date() },
+    // null clears the mark back to "not yet marked", including who/when.
+    data: {
+      attended,
+      attendanceMarkedBy: attended === null ? null : user.id!,
+      attendanceMarkedAt: attended === null ? null : new Date(),
+    },
   });
 
   revalidatePath(`/attendance/${sessionId}`);
