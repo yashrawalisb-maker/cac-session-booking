@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { auth, microsoftSignInEnabled } from "@/auth";
+import { auth, microsoftSignInEnabled, testPgidLoginEnabled } from "@/auth";
 import { IsbLogo } from "@/components/isb-logo";
 import { LoginForm } from "./login-form";
 
@@ -48,11 +48,17 @@ export default async function LoginPage({
         <div className="w-full max-w-sm">
           <h2 className="text-xl font-semibold tracking-tight">Sign in to your account</h2>
           <p className="mt-1 mb-6 text-sm text-muted-foreground">
-            {microsoftSignInEnabled
-              ? "Sign in with your institutional @isb.edu account."
-              : "Use your ISB email and PGP ID to continue."}
+            {testPgidLoginEnabled
+              ? "Enter your PGP ID to continue."
+              : microsoftSignInEnabled
+                ? "Sign in with your institutional @isb.edu account."
+                : "Use your ISB email and PGP ID to continue."}
           </p>
-          <LoginForm urlError={error} microsoftSignInEnabled={microsoftSignInEnabled} />
+          <LoginForm
+            urlError={error}
+            microsoftSignInEnabled={microsoftSignInEnabled}
+            testPgidLogin={testPgidLoginEnabled}
+          />
         </div>
       </div>
     </div>

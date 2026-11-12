@@ -4,9 +4,48 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { loginWithRoster, loginWithMicrosoft, type LoginFormState } from "./actions";
+import { loginWithRoster, loginWithMicrosoft, loginWithPgid, type LoginFormState } from "./actions";
 
 export function LoginForm({
+  urlError,
+  microsoftSignInEnabled,
+  testPgidLogin = false,
+}: {
+  urlError?: string;
+  microsoftSignInEnabled: boolean;
+  testPgidLogin?: boolean;
+}) {
+  if (testPgidLogin) return <PgidLoginForm />;
+  return <StandardLoginForm urlError={urlError} microsoftSignInEnabled={microsoftSignInEnabled} />;
+}
+
+/** Test builds only (TEST_PGID_LOGIN): one PGP ID field, no Microsoft. */
+function PgidLoginForm() {
+  const [state, formAction, pending] = useActionState<LoginFormState, FormData>(loginWithPgid, undefined);
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="rounded-md bg-warning-bg px-3 py-2 text-sm text-warning">
+        Test version — uses a test copy of the data. Sign in with just your PGP ID.
+      </p>
+      {state?.error && (
+        <p role="alert" className="rounded-md bg-danger-bg px-3 py-2 text-sm text-danger">
+          {state.error}
+        </p>
+      )}
+      <form action={formAction} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="pgpId">PGP ID</Label>
+          <Input id="pgpId" name="pgpId" type="text" inputMode="numeric" autoComplete="off" placeholder="e.g. 62610001" required />
+        </div>
+        <Button type="submit" disabled={pending} className="h-11 w-full text-base">
+          {pending ? "Checking…" : "Sign in"}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+function StandardLoginForm({
   urlError,
   microsoftSignInEnabled,
 }: {

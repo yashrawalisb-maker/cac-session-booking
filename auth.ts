@@ -6,10 +6,17 @@ import { authConfig } from "./auth.config";
 import { prisma } from "@/lib/prisma";
 import { isRateLimited, recordLoginAttempt } from "@/lib/rateLimit";
 
+// Test-only sign-in by PGP ID alone (no Microsoft), for staging previews on a test database.
+// Turned on with TEST_PGID_LOGIN=true (set only on a preview branch in Vercel); it is ALWAYS off
+// in Vercel production, whatever the env var says.
+export const testPgidLoginEnabled =
+  process.env.TEST_PGID_LOGIN === "true" && process.env.VERCEL_ENV !== "production";
+
 // Only wire up Microsoft sign-in once its app registration is actually configured — NextAuth
 // validates every configured provider eagerly, so an empty/partial config here would break
 // the roster login too, not just the Microsoft path.
 export const microsoftSignInEnabled = Boolean(
+  !testPgidLoginEnabled &&
   process.env.AUTH_MICROSOFT_ENTRA_ID_ID &&
     process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET &&
     process.env.AUTH_MICROSOFT_ENTRA_ID_ISSUER
@@ -52,6 +59,31 @@ const providers: Provider[] = [
     },
   }),
 ];
+
+if (testPgidLoginEnabled) {
+  providers.push(
+    Credentials({
+      id: "pgid",
+      name: "PGP ID (test)",
+      credentials: { pgpId: { label: "PGP ID", type: "text" } },
+      async authorize(credentials) {
+        const pgpId = String(credentials?.pgpId ?? "").trim();
+        if (!pgpId) return null;
+
+        const key = `pgid:${pgpId}`;
+        if (await isRateLimited(key)) return null;
+
+        const user = await prisma.user.findFirst({
+          where: { pgpId: { equals: pgpId, mode: "insensitive" } },
+        });
+        await recordLoginAttempt(key, !!user, user?.id);
+        if (!user) return null;
+
+        return { id: user.id, name: user.name, email: user.isbEmail, isAdmin: user.isAdmin };
+      },
+    })
+  );
+}
 
 if (microsoftSignInEnabled) {
   providers.push(
