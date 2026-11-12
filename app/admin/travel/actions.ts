@@ -8,7 +8,7 @@ import { parseIstDateTime } from "@/lib/time";
 import { isCohortSplitValue } from "@/lib/cohortSplits";
 import { DEFAULT_CHECKPOINT_LABELS, TRAVEL_STAGES } from "@/lib/travel";
 
-export type ActionState = { error?: string; message?: string } | undefined;
+export type ActionState = { error?: string; message?: string; confirmCheckins?: number } | undefined;
 
 function revalidateTravel() {
   revalidatePath("/admin/travel", "layout");
@@ -56,12 +56,17 @@ export async function updateTravelSlot(slotId: string, _prev: ActionState, formD
   return { message: "Saved." };
 }
 
-export async function deleteTravelSlot(slotId: string): Promise<ActionState> {
+/**
+ * Delete a flight. Students on it become "not assigned" (FK ON DELETE SET NULL); its checkpoints and
+ * their check-ins are removed with it (ON DELETE CASCADE). If it already has check-ins, the first call
+ * returns `confirmCheckins` instead of deleting, and the admin must confirm again (`withCheckins`).
+ */
+export async function deleteTravelSlot(slotId: string, withCheckins = false): Promise<ActionState> {
   await requireAdmin();
   const scans = await prisma.travelScan.count({ where: { checkpoint: { slotId } } });
-  if (scans > 0) return { error: `This flight already has ${scans} check-in(s); clear them before deleting it.` };
-  // Students on it become "not assigned" (FK is ON DELETE SET NULL).
-  await prisma.travelSlot.delete({ where: { id: slotId } });
+  if (scans > 0 && !withCheckins) return { confirmCheckins: scans };
+  const deleted = await prisma.travelSlot.deleteMany({ where: { id: slotId } });
+  if (deleted.count === 0) return { error: "That flight no longer exists." };
   revalidateTravel();
   return { message: "Flight deleted." };
 }

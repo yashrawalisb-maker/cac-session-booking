@@ -99,7 +99,17 @@ export function FlightRow({ slot }: { slot: SlotRow }) {
           aria-label={`Delete ${slot.label}`}
           onClick={() => {
             if (!confirm(`Delete ${slot.label}? Its ${slot.students} students go back to "not assigned".`)) return;
-            startDelete(async () => setDelState(await deleteTravelSlot(slot.id)));
+            startDelete(async () => {
+              let res = await deleteTravelSlot(slot.id);
+              if (res?.confirmCheckins) {
+                const n = res.confirmCheckins;
+                const ok = confirm(
+                  `${slot.label} already has ${n} check-in${n === 1 ? "" : "s"}. Deleting the flight also deletes ${n === 1 ? "it" : "them"} — this can't be undone.\n\nDelete anyway?`,
+                );
+                res = ok ? await deleteTravelSlot(slot.id, true) : undefined;
+              }
+              setDelState(res);
+            });
           }}
         >
           <Trash2 className="size-3.5" />
