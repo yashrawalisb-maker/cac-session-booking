@@ -7,6 +7,7 @@ import { isPast, now, greetingForIST } from "@/lib/time";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { hasAttendanceAccess } from "@/lib/attendance";
 import { AppShell } from "@/components/app-shell";
+import { hasTravelAccess } from "@/lib/travel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ export default async function DashboardPage() {
       userSubtitle={user.email ?? undefined}
       unreadUpdates={unreadUpdates}
       showAttendanceTab={showAttendanceTab}
+      showTravelTab={await hasTravelAccess(user.id!)}
     >
       <div className="flex flex-col gap-6">
         <div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Ticket, Users, LogOut, Menu, X, Bell, Megaphone, ClipboardCheck, CalendarDays } from "lucide-react";
+import { LayoutDashboard, Ticket, Users, LogOut, Menu, X, Bell, Megaphone, ClipboardCheck, CalendarDays, Plane } from "lucide-react";
 import { IsbLogo } from "@/components/isb-logo";
 import { logout } from "@/app/logout-action";
 import { cn } from "@/lib/utils";
@@ -49,6 +49,13 @@ const ATTENDANCE_NAV_ITEM: NavItem = {
   isActive: (p) => p.startsWith("/attendance"),
 };
 
+const TRAVEL_NAV_ITEM: NavItem = {
+  label: "Travel",
+  href: "/travel",
+  icon: Plane,
+  isActive: (p) => p.startsWith("/travel"),
+};
+
 const ADMIN_NAV: NavItem[] = [
   {
     label: "Dashboard",
@@ -61,6 +68,12 @@ const ADMIN_NAV: NavItem[] = [
     href: "/admin/users",
     icon: Users,
     isActive: (p) => p.startsWith("/admin/users"),
+  },
+  {
+    label: "Travel Log",
+    href: "/admin/travel",
+    icon: Plane,
+    isActive: (p) => p.startsWith("/admin/travel") || p.startsWith("/travel"),
   },
   {
     label: "Announcements",
@@ -89,6 +102,7 @@ export function AppShell({
   userSubtitle,
   unreadUpdates = false,
   showAttendanceTab = false,
+  showTravelTab = false,
   children,
 }: {
   variant: "student" | "admin";
@@ -98,6 +112,8 @@ export function AppShell({
   unreadUpdates?: boolean;
   /** Shows the Attendance tab; student pages compute this via hasAttendanceAccess(). */
   showAttendanceTab?: boolean;
+  /** Shows the Travel tab; student pages compute this via hasTravelAccess(). */
+  showTravelTab?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -105,9 +121,11 @@ export function AppShell({
   const nav =
     variant === "admin"
       ? ADMIN_NAV
-      : showAttendanceTab
-        ? [...STUDENT_NAV_BASE, ATTENDANCE_NAV_ITEM]
-        : STUDENT_NAV_BASE;
+      : [
+          ...STUDENT_NAV_BASE,
+          ...(showAttendanceTab ? [ATTENDANCE_NAV_ITEM] : []),
+          ...(showTravelTab ? [TRAVEL_NAV_ITEM] : []),
+        ];
 
   const sidebar = (
     <div className="flex h-full flex-col gap-2 p-4">

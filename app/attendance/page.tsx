@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { AppShell } from "@/components/app-shell";
+import { hasTravelAccess } from "@/lib/travel";
 import { Card, CardContent } from "@/components/ui/card";
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-IN", {
@@ -35,6 +36,7 @@ export default async function AttendanceListPage() {
       userSubtitle={user.email ?? undefined}
       unreadUpdates={unreadUpdates}
       showAttendanceTab={grants.length > 0}
+      showTravelTab={await hasTravelAccess(user.id!)}
     >
       <div className="flex flex-col gap-6">
         <div>

@@ -53,6 +53,11 @@ model User {
   announcements     Announcement[]         @relation("AnnouncementCreatedBy")
   attendanceGrants      SessionAttendanceGrant[] @relation("AttendanceGrantee")
   attendanceGrantsGiven SessionAttendanceGrant[] @relation("AttendanceGrantedBy")
+  travelAssignment          TravelAssignment?
+  travelScans               TravelScan[]        @relation("TravelScanStudent")
+  travelScansMade           TravelScan[]        @relation("TravelScanBy")
+  travelCoordinator         TravelCoordinator?  @relation("TravelCoordinatorUser")
+  travelCoordinatorsGranted TravelCoordinator[] @relation("TravelCoordinatorGrantedBy")
 
   @@map("users")
 }
@@ -257,4 +262,108 @@ model LoginAttempt {
 
   @@index([identifier, createdAt])
   @@map("login_attempts")
+}
+
+// ---------------------------------------------------------------------------------------------
+// Travel Log — live check-in tracking for a group trip (e.g. Mohali → Hyderabad). See lib/travel.ts.
+// Flights ("slots") and who-is-on-which-flight are entered by the admin whenever the data is
+// known; until then students simply have no TravelAssignment row (or one with a null slot).
+// ---------------------------------------------------------------------------------------------
+
+enum TravelStage {
+  BUS
+  AIRPORT
+  GATE
+}
+
+enum TravelScanMethod {
+  qr
+  manual
+}
+
+/**
+ * One flight. Each gets exactly three checkpoints (bus → airport check-in → gate).
+ */
+model TravelSlot {
+  id          String    @id @default(cuid())
+  label       String // e.g. "Day 1 Morning"
+  flightNo    String?   @map("flight_no")
+  departureAt DateTime? @map("departure_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  checkpoints TravelCheckpoint[]
+  assignments TravelAssignment[]
+
+  @@map("travel_slots")
+}
+
+model TravelCheckpoint {
+  id     String      @id @default(cuid())
+  slotId String      @map("slot_id")
+  stage  TravelStage
+  label  String?
+
+  slot         TravelSlot          @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  scans        TravelScan[]
+  coordinators TravelCoordinator[]
+
+  @@unique([slotId, stage])
+  @@map("travel_checkpoints")
+}
+
+/**
+ * Which flight + bus a student is on. Both optional so allocation can be filled in later.
+ */
+model TravelAssignment {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  slotId    String?  @map("slot_id")
+  busNumber String?  @map("bus_number")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slot TravelSlot? @relation(fields: [slotId], references: [id], onDelete: SetNull)
+
+  @@index([slotId])
+  @@map("travel_assignments")
+}
+
+/**
+ * A check-in. Unique per student + checkpoint, so re-scanning updates instead of duplicating.
+ */
+model TravelScan {
+  id           String           @id @default(cuid())
+  userId       String           @map("user_id")
+  checkpointId String           @map("checkpoint_id")
+  scannedById  String?          @map("scanned_by")
+  scannedAt    DateTime         @map("scanned_at")
+  method       TravelScanMethod @default(qr)
+  notes        String?
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  user       User             @relation("TravelScanStudent", fields: [userId], references: [id], onDelete: Cascade)
+  checkpoint TravelCheckpoint @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
+  scannedBy  User?            @relation("TravelScanBy", fields: [scannedById], references: [id], onDelete: SetNull)
+
+  @@unique([userId, checkpointId])
+  @@index([checkpointId])
+  @@index([updatedAt])
+  @@map("travel_scans")
+}
+
+/**
+ * Grants a non-admin user the travel scanner (like SessionAttendanceGrant — not admin rights).
+ */
+model TravelCoordinator {
+  id           String   @id @default(cuid())
+  userId       String   @unique @map("user_id")
+  checkpointId String?  @map("checkpoint_id") // where they're stationed; they can change it themselves
+  grantedById  String   @map("granted_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user       User              @relation("TravelCoordinatorUser", fields: [userId], references: [id], onDelete: Cascade)
+  checkpoint TravelCheckpoint? @relation(fields: [checkpointId], references: [id], onDelete: SetNull)
+  grantedBy  User              @relation("TravelCoordinatorGrantedBy", fields: [grantedById], references: [id])
+
+  @@map("travel_coordinators")
 }
