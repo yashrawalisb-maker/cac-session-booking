@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bus, Plane, ScanLine } from "lucide-react";
+import { Bus, Plane, QrCode } from "lucide-react";
 import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { hasAttendanceAccess } from "@/lib/attendance";
@@ -9,10 +9,10 @@ import { fmtDeparture, fmtTime, STAGE_LABEL } from "@/lib/travel-shared";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { BoardingPassQr } from "@/components/travel/boarding-pass";
+import { StudentScanButton } from "@/components/travel/student-checkin";
 import { cn } from "@/lib/utils";
 
-/** Student boarding pass (+ a shortcut to the scanner for coordinators). */
+/** Student travel card with "Scan to check in" (+ a shortcut to the check-in station for team members). */
 export default async function TravelPage() {
   const user = await requireUser();
 
@@ -47,13 +47,13 @@ export default async function TravelPage() {
           <Card>
             <CardContent className="flex items-center gap-3">
               <span className="flex size-9 items-center justify-center rounded-lg bg-brand-navy-tint text-primary">
-                <ScanLine className="size-5" />
+                <QrCode className="size-5" />
               </span>
               <div className="flex-1">
-                <p className="font-medium">You&apos;re a travel coordinator</p>
-                <p className="text-sm text-muted-foreground">Scan boarding passes at your checkpoint.</p>
+                <p className="font-medium">You&apos;re on the travel team</p>
+                <p className="text-sm text-muted-foreground">Show your check-in QR at your checkpoint.</p>
               </div>
-              <Button nativeButton={false} render={<Link href="/travel/scan" />}>Open scanner</Button>
+              <Button nativeButton={false} render={<Link href="/travel/station" />}>Open station</Button>
             </CardContent>
           </Card>
         )}
@@ -63,7 +63,7 @@ export default async function TravelPage() {
             <CardContent className="flex flex-col gap-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Boarding pass</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Your travel</p>
                   <p className="mt-1 text-lg font-semibold">{me?.name}</p>
                   <p className="text-sm text-muted-foreground">{me?.pgpId}</p>
                 </div>
@@ -86,8 +86,10 @@ export default async function TravelPage() {
                   </div>
                 </div>
               </div>
-              <BoardingPassQr userId={user.id!} fileName={`boarding-pass-${me?.pgpId ?? "qr"}.png`} />
-              <p className="text-center text-xs text-muted-foreground">Show this at the bus, airport check-in and the boarding gate.</p>
+              <StudentScanButton />
+              <p className="text-center text-xs text-muted-foreground">
+                At the bus, airport check-in and boarding gate, scan the QR on a CAC team member&apos;s phone.
+              </p>
               <div className="grid grid-cols-3 gap-2">
                 {TRAVEL_STAGES.map((stage) => {
                   const scan = byStage.get(stage);
@@ -113,7 +115,7 @@ export default async function TravelPage() {
               <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
                 <Plane className="size-8 text-muted-foreground" />
                 <p className="font-medium">Travel details aren&apos;t out yet</p>
-                <p className="text-sm text-muted-foreground">Your flight, bus and boarding QR will appear here once they&apos;re announced.</p>
+                <p className="text-sm text-muted-foreground">Your flight and bus will appear here once they&apos;re announced.</p>
               </CardContent>
             </Card>
           )

@@ -1,16 +1,13 @@
-import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/authz";
 import { hasAttendanceAccess } from "@/lib/attendance";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
-import { canUseTravelScanner } from "@/lib/travel";
 import { AppShell } from "@/components/app-shell";
-import { TravelDataProvider } from "@/components/travel/travel-data";
-import { TravelGate } from "@/components/travel/travel-ui";
-import { TravelScanner } from "@/components/travel/travel-scanner";
+import { CheckinLanding } from "@/components/travel/student-checkin";
 
-export default async function TravelScanPage() {
+/** Opened when a student scans a station QR with their phone's normal camera app. */
+export default async function TravelCheckinPage({ searchParams }: { searchParams: Promise<{ t?: string }> }) {
   const user = await requireUser();
-  if (!(await canUseTravelScanner(user))) redirect("/travel");
+  const { t } = await searchParams;
   const [unreadUpdates, showAttendanceTab] = user.isAdmin
     ? [false, false]
     : await Promise.all([hasUnreadAnnouncements(user.id!), hasAttendanceAccess(user.id!)]);
@@ -19,16 +16,15 @@ export default async function TravelScanPage() {
     <AppShell
       variant={user.isAdmin ? "admin" : "student"}
       userName={user.name ?? user.email ?? ""}
-      userSubtitle={user.isAdmin ? "CAC Admin" : "Travel coordinator"}
+      userSubtitle={user.isAdmin ? "CAC Admin" : (user.email ?? undefined)}
       unreadUpdates={unreadUpdates}
       showAttendanceTab={showAttendanceTab}
       showTravelTab
     >
-      <TravelDataProvider userId={user.id!}>
-        <TravelGate>
-          <TravelScanner />
-        </TravelGate>
-      </TravelDataProvider>
+      <div className="mx-auto flex w-full max-w-md flex-col gap-5">
+        <h1 className="text-2xl font-semibold tracking-tight">Travel check-in</h1>
+        <CheckinLanding token={t ?? null} />
+      </div>
     </AppShell>
   );
 }

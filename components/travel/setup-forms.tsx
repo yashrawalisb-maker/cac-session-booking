@@ -200,7 +200,7 @@ export function CoordinatorsPanel({
   return (
     <div className="flex flex-col gap-3">
       {coordinators.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No coordinators yet. Admins can always use the scanner.</p>
+        <p className="text-sm text-muted-foreground">No team members yet. Admins can always open a check-in station.</p>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
           {coordinators.map((c) => (
@@ -249,7 +249,7 @@ export function CoordinatorsPanel({
             ))}
           </select>
           <Button type="submit" disabled={pending}>
-            {pending ? "Adding…" : "Grant scanner"}
+            {pending ? "Adding…" : "Add to travel team"}
           </Button>
         </div>
         <Feedback state={state} />

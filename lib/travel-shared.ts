@@ -57,6 +57,26 @@ export type SlotStats = {
   pct: number;
 };
 
+/** Reply from POST /api/travel/checkin (a student scanning a team member's station QR). */
+export type CheckinResponse =
+  | { status: "ok"; stage: Stage; flight: string; memberName: string; scannedAt: string; already: boolean }
+  | { status: "confirm_other_flight"; stage: Stage; thisFlight: string; yourFlight: string | null; memberName: string }
+  | { status: "expired" }
+  | { status: "invalid" }
+  | { status: "error"; message: string };
+
+/** Pull a station token out of scanned text: either the raw token or a …/travel/checkin?t=… link. */
+export function extractStationToken(text: string): string | null {
+  const raw = text.trim();
+  if (raw.startsWith("GSBT1.")) return raw;
+  try {
+    const t = new URL(raw).searchParams.get("t");
+    return t?.startsWith("GSBT1.") ? t : null;
+  } catch {
+    return null;
+  }
+}
+
 export type Tone = "green" | "yellow" | "red";
 
 /** >80% green, 50–80% amber, <50% red. */

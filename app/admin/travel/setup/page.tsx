@@ -136,7 +136,7 @@ export default async function TravelSetupPage() {
         )}
       </Section>
 
-      <Section n={3} title="Scanner access" hint="Coordinators get a Travel tab with the QR scanner — they don't become admins.">
+      <Section n={3} title="Travel team" hint="Team members get a check-in station that shows a QR for students to scan. They don't become admins.">
         <CoordinatorsPanel
           coordinators={coordinators.map((c) => ({
             id: c.id,

@@ -16,7 +16,7 @@ import {
 } from "@/lib/travel-shared";
 
 /**
- * Live Travel Log data for the admin dashboard and the coordinator scanner.
+ * Live Travel Log data for the admin dashboard and the team member check-in station.
  *
  * - Loads one snapshot, then polls /api/travel/scans every few seconds (≈11 viewers, so polling
  *   is effectively live without adding Supabase Realtime + RLS to Prisma-owned tables).

@@ -50,8 +50,8 @@ export async function buildTravelSnapshot(viewer: { id: string; name: string; is
 /**
  * Travel Log server helpers. Access model mirrors attendance tracking:
  *  - admins see and do everything;
- *  - TravelCoordinator rows grant a non-admin the scanner (not admin rights);
- *  - students see their own boarding pass once they're on a flight.
+ *  - TravelCoordinator rows make a non-admin a travel team member with a check-in station (not admin rights);
+ *  - students scan a team member's station QR to check in once they're on a flight.
  */
 
 export const TRAVEL_STAGES: TravelStage[] = ["BUS", "AIRPORT", "GATE"];
@@ -67,6 +67,46 @@ export async function serializeScans(): Promise<TravelScanDTO[]> {
     select: { id: true, userId: true, checkpointId: true, scannedById: true, scannedAt: true, method: true, notes: true },
   });
   return scans.map((s) => ({ ...s, scannedAt: s.scannedAt.toISOString() }));
+}
+
+/**
+ * Record a check-in. Idempotent per (student, checkpoint): a repeat updates the row, and the stored
+ * `scannedAt` only ever moves forward (a late offline sync never rewinds it). `existed` says whether
+ * the student had already checked in at this checkpoint before this call.
+ */
+export async function upsertTravelScan(input: {
+  userId: string;
+  checkpointId: string;
+  scannedById: string;
+  scannedAt: Date;
+  method: "qr" | "manual";
+  notes: string | null;
+}) {
+  const key = { userId_checkpointId: { userId: input.userId, checkpointId: input.checkpointId } };
+  const write = async () => {
+    const existing = await prisma.travelScan.findUnique({ where: key });
+    if (!existing) {
+      return { row: await prisma.travelScan.create({ data: input }), existed: false };
+    }
+    const row = await prisma.travelScan.update({
+      where: key,
+      data: {
+        scannedById: input.scannedById,
+        method: input.method,
+        scannedAt: input.scannedAt > existing.scannedAt ? input.scannedAt : existing.scannedAt,
+        notes: input.notes ?? existing.notes,
+      },
+    });
+    return { row, existed: true };
+  };
+  try {
+    return await write();
+  } catch (e) {
+    // Two check-ins for the same student + checkpoint at the same instant: the unique constraint
+    // rejected the second create — retry as an update.
+    if ((e as { code?: string }).code !== "P2002") throw e;
+    return write();
+  }
 }
 
 export async function isTravelCoordinator(userId: string): Promise<boolean> {

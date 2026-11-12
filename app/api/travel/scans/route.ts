@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { canUseTravelScanner, serializeScans } from "@/lib/travel";
+import { canUseTravelScanner, serializeScans, upsertTravelScan } from "@/lib/travel";
 
 export const dynamic = "force-dynamic";
 
@@ -20,9 +20,8 @@ export async function GET() {
 }
 
 /**
- * Record a check-in. Idempotent per (student, checkpoint): a repeat scan updates the row.
- * `scannedAt` is the time on the coordinator's phone (scans may sync late from the offline
- * queue); the stored time only ever moves forward, so a late sync never rewinds it.
+ * Team member records a check-in for a student (manual fallback). `scannedAt` is the time on the
+ * team member's phone (it may sync late from the offline queue).
  */
 export async function POST(req: Request) {
   const { user, error } = await scanner();
@@ -50,34 +49,14 @@ export async function POST(req: Request) {
   if (!student) return Response.json({ error: "Unknown student" }, { status: 422 });
   if (!checkpoint) return Response.json({ error: "Unknown checkpoint" }, { status: 422 });
 
-  const key = { userId_checkpointId: { userId: body.userId, checkpointId: body.checkpointId } };
-  const write = async () => {
-    const existing = await prisma.travelScan.findUnique({ where: key });
-    if (!existing) {
-      return prisma.travelScan.create({
-        data: { userId: body.userId!, checkpointId: body.checkpointId!, scannedById: user!.id, scannedAt, method, notes },
-      });
-    }
-    return prisma.travelScan.update({
-      where: key,
-      data: {
-        scannedById: user!.id,
-        method,
-        scannedAt: scannedAt > existing.scannedAt ? scannedAt : existing.scannedAt,
-        notes: notes ?? existing.notes,
-      },
-    });
-  };
-
-  let row;
-  try {
-    row = await write();
-  } catch (e) {
-    // Two coordinators scanned the same student at the same checkpoint at the same instant:
-    // the unique constraint rejected the second create — retry as an update.
-    if ((e as { code?: string }).code !== "P2002") throw e;
-    row = await write();
-  }
+  const { row } = await upsertTravelScan({
+    userId: body.userId,
+    checkpointId: body.checkpointId,
+    scannedById: user!.id!,
+    scannedAt,
+    method,
+    notes,
+  });
   return Response.json({
     scan: {
       id: row.id,
