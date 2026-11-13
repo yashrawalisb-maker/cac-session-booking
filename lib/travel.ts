@@ -124,11 +124,19 @@ export async function canUseTravelScanner(user: { id?: string; isAdmin?: boolean
 /**
  * Drives the student sidebar "Travel" tab: coordinators always, students only once they've been
  * put on a flight — so nobody sees an empty tab before the allocation is entered.
+ *
+ * Called on EVERY student page (dashboard, bookings, events, attendance…), so it must never break
+ * them: any error here (e.g. the travel tables missing or a DB hiccup) just hides the Travel tab.
  */
 export async function hasTravelAccess(userId: string): Promise<boolean> {
-  const [coordinator, assigned] = await Promise.all([
-    prisma.travelCoordinator.count({ where: { userId } }),
-    prisma.travelAssignment.count({ where: { userId, slotId: { not: null } } }),
-  ]);
-  return coordinator > 0 || assigned > 0;
+  try {
+    const [coordinator, assigned] = await Promise.all([
+      prisma.travelCoordinator.count({ where: { userId } }),
+      prisma.travelAssignment.count({ where: { userId, slotId: { not: null } } }),
+    ]);
+    return coordinator > 0 || assigned > 0;
+  } catch (e) {
+    console.error("[travel] hasTravelAccess failed; hiding the Travel tab", e);
+    return false;
+  }
 }
