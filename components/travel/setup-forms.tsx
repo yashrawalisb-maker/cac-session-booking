@@ -4,6 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import { Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { InlineConfirm } from "./inline-confirm";
 import {
   assignCohortSplit,
   clearAllAssignments,
@@ -59,6 +60,18 @@ export function FlightRow({ slot }: { slot: SlotRow }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(updateTravelSlot.bind(null, slot.id), undefined);
   const [delState, setDelState] = useState<ActionState>(undefined);
   const [deleting, startDelete] = useTransition();
+  // null = idle; { checkins: 0 } = first "are you sure"; { checkins: n } = second warning when it has check-ins
+  const [askDelete, setAskDelete] = useState<{ checkins: number } | null>(null);
+
+  function runDelete(withCheckins: boolean) {
+    setDelState(undefined);
+    startDelete(async () => {
+      const res = await deleteTravelSlot(slot.id, withCheckins);
+      if (res?.confirmCheckins) return setAskDelete({ checkins: res.confirmCheckins });
+      setAskDelete(null);
+      setDelState(res);
+    });
+  }
 
   if (editing) {
     return (
@@ -95,26 +108,36 @@ export function FlightRow({ slot }: { slot: SlotRow }) {
         <Button
           size="icon-sm"
           variant="outline"
-          disabled={deleting}
+          disabled={deleting || askDelete !== null}
           aria-label={`Delete ${slot.label}`}
           onClick={() => {
-            if (!confirm(`Delete ${slot.label}? Its ${slot.students} students go back to "not assigned".`)) return;
-            startDelete(async () => {
-              let res = await deleteTravelSlot(slot.id);
-              if (res?.confirmCheckins) {
-                const n = res.confirmCheckins;
-                const ok = confirm(
-                  `${slot.label} already has ${n} check-in${n === 1 ? "" : "s"}. Deleting the flight also deletes ${n === 1 ? "it" : "them"} — this can't be undone.\n\nDelete anyway?`,
-                );
-                res = ok ? await deleteTravelSlot(slot.id, true) : undefined;
-              }
-              setDelState(res);
-            });
+            setDelState(undefined);
+            setAskDelete({ checkins: 0 });
           }}
         >
           <Trash2 className="size-3.5" />
         </Button>
       </div>
+      {askDelete &&
+        (askDelete.checkins === 0 ? (
+          <InlineConfirm
+            message={`Delete ${slot.label}? Its ${slot.students} student${slot.students === 1 ? "" : "s"} go back to “not assigned”.`}
+            confirmLabel="Delete flight"
+            pending={deleting}
+            onConfirm={() => runDelete(false)}
+            onCancel={() => setAskDelete(null)}
+          />
+        ) : (
+          <InlineConfirm
+            message={`${slot.label} already has ${askDelete.checkins} check-in${askDelete.checkins === 1 ? "" : "s"}. Deleting the flight also deletes ${
+              askDelete.checkins === 1 ? "it" : "them"
+            } — this can't be undone.`}
+            confirmLabel={`Delete flight and ${askDelete.checkins} check-in${askDelete.checkins === 1 ? "" : "s"}`}
+            pending={deleting}
+            onConfirm={() => runDelete(true)}
+            onCancel={() => setAskDelete(null)}
+          />
+        ))}
       <Feedback state={delState} />
     </div>
   );
@@ -173,18 +196,34 @@ export function AssignmentsCsvUpload() {
 export function ClearAllAssignmentsButton({ count }: { count: number }) {
   const [state, setState] = useState<ActionState>(undefined);
   const [pending, start] = useTransition();
+  const [asking, setAsking] = useState(false);
   return (
     <div className="flex flex-col gap-2">
-      <Button
-        variant="destructive"
-        disabled={pending || count === 0}
-        onClick={() => {
-          if (!confirm(`Remove the flight/bus allocation for all ${count} students? Check-ins are kept.`)) return;
-          start(async () => setState(await clearAllAssignments()));
-        }}
-      >
-        Clear all allocations
-      </Button>
+      {asking ? (
+        <InlineConfirm
+          message={`Remove the flight/bus allocation for all ${count} students? Check-ins are kept.`}
+          confirmLabel="Clear all allocations"
+          pending={pending}
+          onConfirm={() =>
+            start(async () => {
+              setState(await clearAllAssignments());
+              setAsking(false);
+            })
+          }
+          onCancel={() => setAsking(false)}
+        />
+      ) : (
+        <Button
+          variant="destructive"
+          disabled={pending || count === 0}
+          onClick={() => {
+            setState(undefined);
+            setAsking(true);
+          }}
+        >
+          Clear all allocations
+        </Button>
+      )}
       <Feedback state={state} />
     </div>
   );

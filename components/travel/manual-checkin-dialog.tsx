@@ -8,6 +8,7 @@ import { STAGES, STAGE_LABEL, fmtTime, type Stage } from "@/lib/travel-shared";
 import { setStudentAssignment } from "@/app/admin/travel/actions";
 import { useTravel } from "./travel-data";
 import { StageChips } from "./travel-ui";
+import { InlineConfirm } from "./inline-confirm";
 
 const inputCls = "h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus:border-ring";
 
@@ -72,8 +73,10 @@ export function ManualCheckinDialog({
     onClose();
   }
 
+  const [askClear, setAskClear] = useState(false);
+
   function clear() {
-    if (!student || !checkpoint || !confirm(`Clear ${STAGE_LABEL[stage]} check-in for ${student.name}?`)) return;
+    if (!student || !checkpoint) return;
     setErr(null);
     startTransition(async () => {
       try {
@@ -249,11 +252,20 @@ export function ManualCheckinDialog({
             >
               {wrongSlot ? "Save override check-in" : `Save ${STAGE_LABEL[stage]} check-in`}
             </button>
-            {isAdmin && existing && !existing.pending && (
-              <button onClick={clear} disabled={pending} className="w-full py-2 text-sm font-medium text-danger">
-                Clear this check-in
-              </button>
-            )}
+            {isAdmin && existing && !existing.pending && student &&
+              (askClear ? (
+                <InlineConfirm
+                  message={`Clear ${STAGE_LABEL[stage]} check-in for ${student.name}?`}
+                  confirmLabel="Clear check-in"
+                  pending={pending}
+                  onConfirm={clear}
+                  onCancel={() => setAskClear(false)}
+                />
+              ) : (
+                <button onClick={() => setAskClear(true)} disabled={pending} className="w-full py-2 text-sm font-medium text-danger">
+                  Clear this check-in
+                </button>
+              ))}
           </div>
         )}
       </div>
