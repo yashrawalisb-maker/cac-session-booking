@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "One Club Conclave 2026 — CAC Session Booking",
+  title: "CAC Mohali — CAC Session Booking",
   description: "Career Advancement Council — ISB session booking platform",
 };
 

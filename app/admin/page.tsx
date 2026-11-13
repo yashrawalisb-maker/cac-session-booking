@@ -37,7 +37,7 @@ export default async function AdminDashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Admin Dashboard</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Overview of One Club Conclave bookings and events.
+            Overview of CAC Mohali bookings and events.
           </p>
         </div>
         <div className="flex items-center gap-2">
