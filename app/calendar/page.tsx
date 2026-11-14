@@ -3,7 +3,6 @@ import { requireUser } from "@/lib/authz";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { hasAttendanceAccess } from "@/lib/attendance";
 import { AppShell } from "@/components/app-shell";
-import { hasTravelAccess } from "@/lib/travel";
 import { Button } from "@/components/ui/button";
 
 // Served from public/. Anyone with the link can open it directly — fine for a schedule.
@@ -25,7 +24,6 @@ export default async function CalendarPage() {
       userSubtitle={user.email ?? undefined}
       unreadUpdates={unreadUpdates}
       showAttendanceTab={showAttendanceTab}
-      showTravelTab={await hasTravelAccess(user.id!)}
     >
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">

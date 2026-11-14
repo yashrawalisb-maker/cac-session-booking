@@ -12,7 +12,6 @@ import { isWibClub, wibTrackLabel, wibTrackOrder } from "@/lib/wibTracks";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { hasAttendanceAccess } from "@/lib/attendance";
 import { AppShell } from "@/components/app-shell";
-import { hasTravelAccess } from "@/lib/travel";
 import { LaunchingSoon } from "@/components/launching-soon";
 import { SessionBookPanel } from "@/components/session-book-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -87,7 +86,6 @@ export default async function SessionDetailPage({
         userSubtitle={user.email ?? undefined}
         unreadUpdates={unreadUpdates}
         showAttendanceTab={showAttendanceTab}
-        showTravelTab={await hasTravelAccess(user.id!)}
       >
         <LaunchingSoon />
       </AppShell>
@@ -176,7 +174,6 @@ export default async function SessionDetailPage({
       userSubtitle={user.email ?? undefined}
       unreadUpdates={unreadUpdates}
       showAttendanceTab={showAttendanceTab}
-      showTravelTab={await hasTravelAccess(user.id!)}
     >
       <div className="flex flex-col gap-6">
         <Link

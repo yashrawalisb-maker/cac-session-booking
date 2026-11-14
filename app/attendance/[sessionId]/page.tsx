@@ -6,7 +6,6 @@ import { prisma } from "@/lib/prisma";
 import { canMarkAttendance, hasAttendanceAccess } from "@/lib/attendance";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { AppShell } from "@/components/app-shell";
-import { hasTravelAccess } from "@/lib/travel";
 import { AttendanceMarker } from "@/components/attendance-marker";
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-IN", {
@@ -53,7 +52,6 @@ export default async function AttendanceSessionPage({
       userSubtitle={user.email ?? undefined}
       unreadUpdates={unreadUpdates}
       showAttendanceTab={showAttendanceTab}
-      showTravelTab={await hasTravelAccess(user.id!)}
     >
       <div className="flex flex-col gap-6">
         <div>

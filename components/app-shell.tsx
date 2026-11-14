@@ -102,7 +102,6 @@ export function AppShell({
   userSubtitle,
   unreadUpdates = false,
   showAttendanceTab = false,
-  showTravelTab = false,
   children,
 }: {
   variant: "student" | "admin";
@@ -112,8 +111,6 @@ export function AppShell({
   unreadUpdates?: boolean;
   /** Shows the Attendance tab; student pages compute this via hasAttendanceAccess(). */
   showAttendanceTab?: boolean;
-  /** Shows the Travel tab; student pages compute this via hasTravelAccess(). */
-  showTravelTab?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -124,7 +121,8 @@ export function AppShell({
       : [
           ...STUDENT_NAV_BASE,
           ...(showAttendanceTab ? [ATTENDANCE_NAV_ITEM] : []),
-          ...(showTravelTab ? [TRAVEL_NAV_ITEM] : []),
+          // Always visible: before a flight is assigned, the Travel page says so.
+          TRAVEL_NAV_ITEM,
         ];
 
   const sidebar = (

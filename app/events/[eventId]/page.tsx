@@ -7,7 +7,6 @@ import { isPast } from "@/lib/time";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { hasAttendanceAccess } from "@/lib/attendance";
 import { AppShell } from "@/components/app-shell";
-import { hasTravelAccess } from "@/lib/travel";
 import { LaunchingSoon } from "@/components/launching-soon";
 import { SessionListFiltered, type FilterableSession } from "@/components/session-list-filtered";
 import { computeSessionStatus } from "@/lib/sessionStatus";
@@ -59,7 +58,6 @@ export default async function EventDetailPage({
         userSubtitle={user.email ?? undefined}
         unreadUpdates={unreadUpdates}
         showAttendanceTab={showAttendanceTab}
-        showTravelTab={await hasTravelAccess(user.id!)}
       >
         <LaunchingSoon />
       </AppShell>
@@ -133,7 +131,6 @@ export default async function EventDetailPage({
       userSubtitle={user.email ?? undefined}
       unreadUpdates={unreadUpdates}
       showAttendanceTab={showAttendanceTab}
-      showTravelTab={await hasTravelAccess(user.id!)}
     >
       <div className="flex flex-col gap-6">
         <div>

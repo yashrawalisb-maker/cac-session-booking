@@ -8,7 +8,6 @@ import { hasAttendanceAccess } from "@/lib/attendance";
 import { wibTrackLabel } from "@/lib/wibTracks";
 import { AddToCalendarLink } from "@/components/add-to-calendar-link";
 import { AppShell } from "@/components/app-shell";
-import { hasTravelAccess } from "@/lib/travel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -118,7 +117,6 @@ export default async function MyBookingsPage() {
       userSubtitle={user.email ?? undefined}
       unreadUpdates={unreadUpdates}
       showAttendanceTab={showAttendanceTab}
-      showTravelTab={await hasTravelAccess(user.id!)}
     >
       <div className="flex flex-col gap-6">
         <div>

@@ -35,7 +35,6 @@ export default async function TravelPage() {
       userSubtitle={user.isAdmin ? "CAC Admin" : (user.email ?? undefined)}
       unreadUpdates={unreadUpdates}
       showAttendanceTab={showAttendanceTab}
-      showTravelTab
     >
       <div className="mx-auto flex w-full max-w-md flex-col gap-5">
         <div>
@@ -110,12 +109,22 @@ export default async function TravelPage() {
             </CardContent>
           </Card>
         ) : (
-          !canScan && (
+          // Shown to everyone without a flight yet (team members included — they travel too).
+          !user.isAdmin && (
             <Card>
-              <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-                <Plane className="size-8 text-muted-foreground" />
-                <p className="font-medium">Travel details aren&apos;t out yet</p>
-                <p className="text-sm text-muted-foreground">Your flight and bus will appear here once they&apos;re announced.</p>
+              <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+                <span className="flex size-12 items-center justify-center rounded-full bg-muted">
+                  <Plane className="size-6 text-muted-foreground" />
+                </span>
+                <div>
+                  <p className="font-medium">You haven&apos;t been assigned to a flight yet</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {"Once CAC assigns your flight and bus, they'll show up here — along with the "}
+                    <span className="font-medium text-foreground">Scan to check in</span>
+                    {" button you'll use at the bus, airport and boarding gate."}
+                  </p>
+                </div>
+                <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">Status: Not assigned</span>
               </CardContent>
             </Card>
           )

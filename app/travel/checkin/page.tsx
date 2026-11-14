@@ -19,7 +19,6 @@ export default async function TravelCheckinPage({ searchParams }: { searchParams
       userSubtitle={user.isAdmin ? "CAC Admin" : (user.email ?? undefined)}
       unreadUpdates={unreadUpdates}
       showAttendanceTab={showAttendanceTab}
-      showTravelTab
     >
       <div className="mx-auto flex w-full max-w-md flex-col gap-5">
         <h1 className="text-2xl font-semibold tracking-tight">Travel check-in</h1>

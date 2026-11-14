@@ -22,7 +22,6 @@ export default async function TravelStationPage() {
       userSubtitle={user.isAdmin ? "CAC Admin" : "Travel team"}
       unreadUpdates={unreadUpdates}
       showAttendanceTab={showAttendanceTab}
-      showTravelTab
     >
       <TravelDataProvider userId={user.id!}>
         <TravelGate>

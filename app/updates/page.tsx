@@ -7,7 +7,6 @@ import { visibleAnnouncementsWhere } from "@/lib/announcements";
 import { hasAttendanceAccess } from "@/lib/attendance";
 import { clubShort } from "@/lib/clubs";
 import { AppShell } from "@/components/app-shell";
-import { hasTravelAccess } from "@/lib/travel";
 import { Badge } from "@/components/ui/badge";
 
 const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", {
@@ -61,7 +60,6 @@ export default async function UpdatesPage() {
       userSubtitle={user.email ?? undefined}
       unreadUpdates={false}
       showAttendanceTab={showAttendanceTab}
-      showTravelTab={await hasTravelAccess(user.id!)}
     >
       <div className="flex flex-col gap-8">
         <div>
