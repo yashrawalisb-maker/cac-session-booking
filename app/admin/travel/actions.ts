@@ -73,12 +73,11 @@ export async function deleteTravelSlot(slotId: string, withCheckins = false): Pr
 
 // ---- allocation -----------------------------------------------------------------------------
 
-/** Put every student in a cohort split on one flight (and optionally one bus). */
+/** Put every student in a cohort split on one flight. (Buses aren't numbered; travel_assignments.bus_number is unused.) */
 export async function assignCohortSplit(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requireAdmin();
   const split = String(formData.get("split") ?? "");
   const slotId = String(formData.get("slotId") ?? "") || null;
-  const busNumber = String(formData.get("busNumber") ?? "").trim() || null;
   if (!isCohortSplitValue(split)) return { error: "Pick a cohort split." };
   if (slotId && !(await prisma.travelSlot.findUnique({ where: { id: slotId }, select: { id: true } }))) {
     return { error: "That flight no longer exists." };
@@ -91,7 +90,7 @@ export async function assignCohortSplit(_prev: ActionState, formData: FormData):
   // Bulk (createMany + updateMany), never a per-row loop in one transaction — see PROJECT_CONTEXT gotcha #1.
   await prisma.$transaction([
     prisma.travelAssignment.createMany({ data: ids.map((userId) => ({ userId })), skipDuplicates: true }),
-    prisma.travelAssignment.updateMany({ where: { userId: { in: ids } }, data: { slotId, busNumber } }),
+    prisma.travelAssignment.updateMany({ where: { userId: { in: ids } }, data: { slotId } }),
   ]);
   revalidateTravel();
   return { message: `${split}: ${ids.length} students ${slotId ? "assigned" : "unassigned"}.` };
@@ -99,7 +98,8 @@ export async function assignCohortSplit(_prev: ActionState, formData: FormData):
 
 /**
  * CSV upload for when the real allocation arrives student-by-student.
- * Columns: pgp_id (required), flight (flight name or flight number; blank = not assigned), bus (optional).
+ * Columns: pgp_id (required), flight (flight name or flight number; blank = not assigned).
+ * Any other columns (e.g. an old "bus" column) are ignored.
  */
 export async function importTravelAssignmentsCsv(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requireAdmin();
@@ -125,7 +125,7 @@ export async function importTravelAssignmentsCsv(_prev: ActionState, formData: F
     const flight = record.flight?.trim() ?? "";
     const slotId = flight ? slotByKey.get(flight.toLowerCase()) : null;
     if (flight && !slotId) throw new Error(`Row ${row}: unknown flight “${flight}” (use a flight name or number from the Flights list)`);
-    return { userId, slotId: slotId ?? null, busNumber: record.bus?.trim() || null };
+    return { userId, slotId: slotId ?? null };
   });
   if (headerError) return { error: headerError };
 
@@ -146,12 +146,12 @@ export async function importTravelAssignmentsCsv(_prev: ActionState, formData: F
 }
 
 /** Per-student change from the flight list (e.g. a late swap). */
-export async function setStudentAssignment(userId: string, slotId: string | null, busNumber: string | null): Promise<ActionState> {
+export async function setStudentAssignment(userId: string, slotId: string | null): Promise<ActionState> {
   await requireAdmin();
   await prisma.travelAssignment.upsert({
     where: { userId },
-    create: { userId, slotId, busNumber: busNumber?.trim() || null },
-    update: { slotId, busNumber: busNumber?.trim() || null },
+    create: { userId, slotId },
+    update: { slotId },
   });
   revalidateTravel();
   return { message: "Saved." };

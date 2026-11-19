@@ -62,7 +62,7 @@ export function TravelDashboard() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Total label="On a flight" value={`${assignedCount}/${students.length}`} />
             {STAGES.map((stage) => (
-              <Total key={stage} label={`At ${STAGE_LABEL[stage].toLowerCase()}`} value={totals[stage]} />
+              <Total key={stage} label={`${STAGE_LABEL[stage]} check-ins`} value={totals[stage]} />
             ))}
           </div>
 
@@ -86,7 +86,7 @@ export function TravelDashboard() {
                         </span>
                       </div>
                       <div className="flex items-baseline justify-between">
-                        <span className="text-sm text-muted-foreground">At {STAGE_LABEL[s.activeStage].toLowerCase()}</span>
+                        <span className="text-sm text-muted-foreground">{`${STAGE_LABEL[s.activeStage]} check-ins`}</span>
                         <span className={cn("text-2xl font-semibold", s.total ? tone.text : "text-muted-foreground")}>
                           {s.done}
                           <span className="text-base font-normal text-muted-foreground"> / {s.total}</span>
@@ -99,7 +99,7 @@ export function TravelDashboard() {
                             key={stage}
                             className={cn("rounded-md py-1.5", stage === s.activeStage ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}
                           >
-                            {stage} {s.counts[stage]}/{s.total}
+                            {`${STAGE_LABEL[stage]} ${s.counts[stage]}/${s.total}`}
                           </div>
                         ))}
                       </div>
@@ -155,7 +155,7 @@ export function TravelDashboard() {
                         <div className="min-w-0">
                           <div className="truncate font-medium">{st?.name ?? "Unknown student"}</div>
                           <div className="truncate text-xs text-muted-foreground">
-                            {slotById.get(cp?.slotId ?? "")?.label} · {cp?.stage} · {scan.method === "manual" ? "manual" : "QR"}
+                            {`${slotById.get(cp?.slotId ?? "")?.label ?? ""} · ${cp ? STAGE_LABEL[cp.stage] : ""} · ${scan.method === "manual" ? "manual" : "QR"}`}
                             {by ? ` · ${by}` : ""}
                             {scan.notes ? ` · “${scan.notes}”` : ""}
                           </div>

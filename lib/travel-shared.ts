@@ -1,10 +1,15 @@
 // Client-safe Travel Log types + pure helpers (no Prisma import), shared by the API routes,
 // the live dashboard, the scanner and the CSV export.
 
+// The three checkpoints of the move, in order:
+//   BUS     = Mohali campus bus → Chandigarh airport
+//   AIRPORT = Chandigarh airport (flight to Hyderabad)
+//   GATE    = Hyderabad airport bus → campus
+// The internal codes are kept as-is (they're stored in the DB enum); always show STAGE_LABEL on screen.
 export const STAGES = ["BUS", "AIRPORT", "GATE"] as const;
 export type Stage = (typeof STAGES)[number];
 
-export const STAGE_LABEL: Record<Stage, string> = { BUS: "Bus", AIRPORT: "Airport", GATE: "Gate" };
+export const STAGE_LABEL: Record<Stage, string> = { BUS: "Mohali bus", AIRPORT: "Airport", GATE: "Hyderabad bus" };
 
 export type TravelSlotDTO = {
   id: string;
@@ -22,7 +27,6 @@ export type TravelStudentDTO = {
   isbEmail: string;
   cohortSplit: string | null;
   slotId: string | null;
-  busNumber: string | null;
 };
 
 export type TravelScanDTO = {
@@ -188,8 +192,10 @@ export function buildManifestCsv(snapshot: TravelSnapshot, stageIndex: Map<strin
     "Cohort Split",
     "Flight",
     "Flight No",
-    "Bus",
-    ...STAGES.flatMap((s) => [`${s} Status`, `${s} Time (IST)`, `${s} Method`, `${s} By`, `${s} Notes`]),
+    ...STAGES.flatMap((st) => {
+      const s = STAGE_LABEL[st];
+      return [`${s} Status`, `${s} Time (IST)`, `${s} Method`, `${s} By`, `${s} Notes`];
+    }),
   ];
   const rows = students.map((st) => {
     const slot = st.slotId ? slotById.get(st.slotId) : undefined;
@@ -201,7 +207,6 @@ export function buildManifestCsv(snapshot: TravelSnapshot, stageIndex: Map<strin
       st.cohortSplit,
       slot?.label ?? "Not assigned",
       slot?.flightNo,
-      st.busNumber,
       ...STAGES.flatMap((stage) => {
         const scan = stages[stage];
         if (!scan) return ["Pending", "", "", "", ""];

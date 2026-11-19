@@ -35,10 +35,9 @@ export function ManualCheckinDialog({
   const [pending, startTransition] = useTransition();
   const isAdmin = !!me?.isAdmin;
 
-  // admin-only: change this student's flight/bus
+  // admin-only: change this student's flight
   const [editAssign, setEditAssign] = useState(false);
   const [assignSlot, setAssignSlot] = useState(student?.slotId ?? "");
-  const [assignBus, setAssignBus] = useState(student?.busNumber ?? "");
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -58,7 +57,6 @@ export function ManualCheckinDialog({
     setStudentId(id);
     setSlotId(s?.slotId ?? slotId);
     setAssignSlot(s?.slotId ?? "");
-    setAssignBus(s?.busNumber ?? "");
     setQuery("");
   }
 
@@ -92,7 +90,7 @@ export function ManualCheckinDialog({
     if (!student) return;
     setErr(null);
     startTransition(async () => {
-      const res = await setStudentAssignment(student.id, assignSlot || null, assignBus || null);
+      const res = await setStudentAssignment(student.id, assignSlot || null);
       if (res?.error) return setErr(res.error);
       await refresh();
       setEditAssign(false);
@@ -120,14 +118,13 @@ export function ManualCheckinDialog({
               <div className="min-w-0">
                 <div className="font-semibold">{student.name}</div>
                 <div className="text-sm text-muted-foreground">
-                  {student.pgpId} · {student.cohortSplit ?? "—"} · {slotById.get(student.slotId ?? "")?.label ?? "No flight yet"} ·{" "}
-                  {student.busNumber ?? "No bus"}
+                  {`${student.pgpId} · ${student.cohortSplit ?? "—"} · ${slotById.get(student.slotId ?? "")?.label ?? "No flight yet"}`}
                 </div>
               </div>
               <div className="flex shrink-0 gap-3 text-sm">
                 {isAdmin && (
                   <button onClick={() => setEditAssign((v) => !v)} className="font-medium text-primary underline-offset-4 hover:underline">
-                    {editAssign ? "Cancel" : "Change flight/bus"}
+                    {editAssign ? "Cancel" : "Change flight"}
                   </button>
                 )}
                 {!initialStudent && (
@@ -138,7 +135,7 @@ export function ManualCheckinDialog({
               </div>
             </div>
             {editAssign && (
-              <div className="mt-3 grid grid-cols-[1fr_7rem_auto] items-end gap-2">
+              <div className="mt-3 grid grid-cols-[1fr_auto] items-end gap-2">
                 <select value={assignSlot} onChange={(e) => setAssignSlot(e.target.value)} className={inputCls} aria-label="Flight">
                   <option value="">Not assigned</option>
                   {slots.map((s) => (
@@ -148,7 +145,6 @@ export function ManualCheckinDialog({
                     </option>
                   ))}
                 </select>
-                <input value={assignBus} onChange={(e) => setAssignBus(e.target.value)} placeholder="Bus" className={inputCls} aria-label="Bus" />
                 <Button size="lg" onClick={saveAssignment} disabled={pending}>
                   Save
                 </Button>
@@ -208,11 +204,11 @@ export function ManualCheckinDialog({
                     key={s}
                     onClick={() => setStage(s)}
                     className={cn(
-                      "rounded-lg py-2.5 text-sm font-semibold ring-1",
+                      "rounded-lg px-1 py-2.5 text-sm font-semibold leading-tight ring-1",
                       stage === s ? "bg-primary text-primary-foreground ring-primary" : "bg-card ring-border hover:bg-muted",
                     )}
                   >
-                    {s}
+                    {STAGE_LABEL[s]}
                   </button>
                 ))}
               </div>

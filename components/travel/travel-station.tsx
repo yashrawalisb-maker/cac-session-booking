@@ -80,7 +80,7 @@ export function TravelStation() {
                   const cp = checkpoints.find((c) => c.slotId === slot.id && c.stage === stage);
                   return cp ? (
                     <option key={cp.id} value={cp.id}>
-                      {slot.label} · {stage}
+                      {`${slot.label} · ${STAGE_LABEL[stage]}`}
                     </option>
                   ) : null;
                 })}
@@ -151,7 +151,7 @@ export function TravelStation() {
         <section className="rounded-xl bg-card p-4 ring-1 ring-border">
           <div className="flex items-baseline justify-between">
             <h2 className="font-semibold">
-              {mySlot.label} · {myCp.stage} (everyone)
+              {`${mySlot.label} · ${STAGE_LABEL[myCp.stage]} (everyone)`}
             </h2>
             <span className={cn("text-sm font-semibold", TONE_CLASSES[toneFor(herePct)].text)}>
               {stats.counts[myCp.stage]} / {stats.total}
@@ -163,7 +163,7 @@ export function TravelStation() {
           <div className="mt-3 grid grid-cols-3 text-center text-xs text-muted-foreground">
             {STAGES.map((stage) => (
               <div key={stage} className={cn(stage === myCp.stage && "font-semibold text-foreground")}>
-                {stage} {stats.counts[stage]}/{stats.total}
+                {`${STAGE_LABEL[stage]} ${stats.counts[stage]}/${stats.total}`}
               </div>
             ))}
           </div>
@@ -178,9 +178,7 @@ export function TravelStation() {
                     <li key={s.id}>
                       <button onClick={() => setManual({ studentId: s.id })} className="w-full py-2 text-left text-sm">
                         <span className="font-medium">{s.name}</span>{" "}
-                        <span className="text-muted-foreground">
-                          {s.pgpId} · {s.busNumber ?? "No bus"}
-                        </span>
+                        <span className="text-muted-foreground">{s.pgpId}</span>
                       </button>
                     </li>
                   ))}

@@ -30,7 +30,7 @@ export function FlightRoster({ slotId }: { slotId: string | null }) {
       .filter((s) => (slot ? s.slotId === slot.id : !s.slotId || !slotById.has(s.slotId)))
       .map((s) => ({ s, stages: stagesFor(s.id) }))
       .filter(({ s, stages }) => {
-        if (q && ![s.name, s.pgpId, s.isbEmail, s.busNumber ?? "", s.cohortSplit ?? ""].some((v) => v.toLowerCase().includes(q))) return false;
+        if (q && ![s.name, s.pgpId, s.isbEmail, s.cohortSplit ?? ""].some((v) => v.toLowerCase().includes(q))) return false;
         const done = Boolean(stages[activeStage]);
         return status === "ALL" || (status === "DONE" ? done : !done);
       })
@@ -92,7 +92,7 @@ export function FlightRoster({ slotId }: { slotId: string | null }) {
         <Card>
           <CardContent className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="text-sm text-muted-foreground">Checked in at {STAGE_LABEL[activeStage].toLowerCase()}</span>
+              <span className="text-sm text-muted-foreground">{`${STAGE_LABEL[activeStage]} check-ins`}</span>
               <span className={cn("text-xl font-semibold", tone.text)}>
                 {count} / {stats.total}
               </span>
@@ -111,12 +111,12 @@ export function FlightRoster({ slotId }: { slotId: string | null }) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search name, PGP ID, email, bus or cohort split"
+          placeholder="Search name, PGP ID, email or cohort split"
           className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-ring"
         />
         <div className="flex flex-wrap gap-2">
           <Segmented
-            options={STAGES.map((s) => ({ value: s, label: `${s} ${stats.counts[s]}` }))}
+            options={STAGES.map((s) => ({ value: s, label: `${STAGE_LABEL[s]} ${stats.counts[s]}` }))}
             value={activeStage}
             onChange={(v) => setStage(v as Stage)}
           />
@@ -145,8 +145,8 @@ export function FlightRoster({ slotId }: { slotId: string | null }) {
                     <div className="min-w-0 flex-1">
                       <div className={cn("truncate font-medium", !scan && slot && "text-danger")}>{s.name}</div>
                       <div className="truncate text-xs text-muted-foreground">
-                        {s.pgpId} · {s.cohortSplit ?? "—"} · {s.busNumber ?? "No bus"}
-                        {scan ? ` · ${activeStage} ${fmtTime(scan.scannedAt)}${scan.method === "manual" ? " (manual)" : ""}` : ""}
+                        {`${s.pgpId} · ${s.cohortSplit ?? "—"}`}
+                        {scan ? ` · ${STAGE_LABEL[activeStage]} ${fmtTime(scan.scannedAt)}${scan.method === "manual" ? " (manual)" : ""}` : ""}
                         {scan?.notes ? ` · “${scan.notes}”` : ""}
                       </div>
                     </div>
@@ -165,8 +165,7 @@ export function FlightRoster({ slotId }: { slotId: string | null }) {
         )}
       </Card>
       <p className="pb-4 text-center text-xs text-muted-foreground">
-        Dots: Bus · Airport · Gate. Amber = checked in on a different flight&apos;s checkpoint. Tap a student to check in, change flight/bus or clear a
-        check-in.
+        {"Dots: Mohali bus · Airport · Hyderabad bus. Amber = checked in on a different flight's checkpoint. Tap a student to check in, change their flight or clear a check-in."}
       </p>
 
       {open && <ManualCheckinDialog onClose={() => setOpen(null)} studentId={open} defaultStage={activeStage} />}

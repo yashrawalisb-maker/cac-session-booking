@@ -48,7 +48,7 @@ export function AddFlightForm() {
         <Button type="submit" disabled={pending}>
           {pending ? "Adding…" : "Add flight"}
         </Button>
-        <span className="text-xs text-muted-foreground">Departure is IST. Bus → Airport → Gate checkpoints are created automatically.</span>
+        <span className="text-xs text-muted-foreground">Departure is IST. Mohali bus → Airport → Hyderabad bus checkpoints are created automatically.</span>
       </div>
       <Feedback state={state} />
     </form>
@@ -145,20 +145,19 @@ export function FlightRow({ slot }: { slot: SlotRow }) {
 
 // ---- allocation by cohort split ---------------------------------------------------------------
 
-export type SplitRow = { split: string; total: number; slotId: string; bus: string; summary: string };
+export type SplitRow = { split: string; total: number; slotId: string; summary: string };
 
 export function SplitAssignRow({ row, slots }: { row: SplitRow; slots: { id: string; label: string }[] }) {
   // Controlled + remounted (via key) from server data, so React 19's post-action form reset
   // can't snap the select back to a stale value (PROJECT_CONTEXT gotcha #7).
   const [slotId, setSlotId] = useState(row.slotId);
-  const [bus, setBus] = useState(row.bus);
   const [state, action, pending] = useActionState<ActionState, FormData>(assignCohortSplit, undefined);
 
   return (
-    <form action={action} className="grid grid-cols-[3.5rem_1fr] items-center gap-x-3 gap-y-1.5 border-b border-border py-2.5 last:border-0 sm:grid-cols-[3.5rem_9rem_1fr_6rem_auto]">
+    <form action={action} className="grid grid-cols-[3.5rem_1fr_auto] items-center gap-x-3 gap-y-1.5 border-b border-border py-2.5 last:border-0 sm:grid-cols-[3.5rem_9rem_1fr_auto]">
       <input type="hidden" name="split" value={row.split} />
       <span className="font-semibold">{row.split}</span>
-      <span className="text-xs text-muted-foreground sm:text-sm">
+      <span className="col-span-2 text-xs text-muted-foreground sm:col-span-1 sm:text-sm">
         {row.total} students · <span className={cn(row.summary === "Not assigned" && "text-warning")}>{row.summary}</span>
       </span>
       <select name="slotId" value={slotId} onChange={(e) => setSlotId(e.target.value)} className={cn(inputCls, "col-span-2 sm:col-span-1")} aria-label={`Flight for ${row.split}`}>
@@ -169,7 +168,6 @@ export function SplitAssignRow({ row, slots }: { row: SplitRow; slots: { id: str
           </option>
         ))}
       </select>
-      <input name="busNumber" value={bus} onChange={(e) => setBus(e.target.value)} placeholder="Bus" className={inputCls} aria-label={`Bus for ${row.split}`} />
       <Button type="submit" variant="outline" disabled={pending || row.total === 0}>
         {pending ? "…" : "Apply"}
       </Button>
@@ -201,7 +199,7 @@ export function ClearAllAssignmentsButton({ count }: { count: number }) {
     <div className="flex flex-col gap-2">
       {asking ? (
         <InlineConfirm
-          message={`Remove the flight/bus allocation for all ${count} students? Check-ins are kept.`}
+          message={`Remove the flight allocation for all ${count} students? Check-ins are kept.`}
           confirmLabel="Clear all allocations"
           pending={pending}
           onConfirm={() =>

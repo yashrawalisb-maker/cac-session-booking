@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bus, Plane, QrCode } from "lucide-react";
+import { Plane, QrCode } from "lucide-react";
 import { requireUser } from "@/lib/authz";
 import { prisma } from "@/lib/prisma";
 import { hasAttendanceAccess } from "@/lib/attendance";
@@ -67,27 +67,19 @@ export default async function TravelPage() {
                   <p className="text-sm text-muted-foreground">{me?.pgpId}</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-start gap-2">
-                  <Plane className="mt-0.5 size-4 text-primary/70" />
-                  <div>
-                    <p className="font-medium">{slot.label}</p>
-                    <p className="text-muted-foreground">
-                      {slot.flightNo ?? "Flight no. TBA"} · {fmtDeparture(slot.departureAt?.toISOString())}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Bus className="mt-0.5 size-4 text-primary/70" />
-                  <div>
-                    <p className="font-medium">{assignment?.busNumber ?? "Bus TBA"}</p>
-                    <p className="text-muted-foreground">From campus</p>
-                  </div>
+              <div className="flex items-start gap-2 text-sm">
+                <Plane className="mt-0.5 size-4 text-primary/70" />
+                <div>
+                  <p className="font-medium">{slot.label}</p>
+                  <p className="text-muted-foreground">
+                    {`${slot.flightNo ?? "Flight no. TBA"} · ${fmtDeparture(slot.departureAt?.toISOString())}`}
+                  </p>
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground">Mohali campus → Chandigarh airport → Hyderabad airport → campus</p>
               <StudentScanButton />
               <p className="text-center text-xs text-muted-foreground">
-                At the bus, airport check-in and boarding gate, scan the QR on a CAC team member&apos;s phone.
+                {"Scan the QR on a CAC team member's phone when you board the Mohali bus, at the airport, and when you board the Hyderabad bus."}
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {TRAVEL_STAGES.map((stage) => {
@@ -119,9 +111,9 @@ export default async function TravelPage() {
                 <div>
                   <p className="font-medium">You haven&apos;t been assigned to a flight yet</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {"Once CAC assigns your flight and bus, they'll show up here — along with the "}
+                    {"Once CAC assigns your flight, it'll show up here — along with the "}
                     <span className="font-medium text-foreground">Scan to check in</span>
-                    {" button you'll use at the bus, airport and boarding gate."}
+                    {" button you'll use on the Mohali bus, at the airport and on the Hyderabad bus."}
                   </p>
                 </div>
                 <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">Status: Not assigned</span>

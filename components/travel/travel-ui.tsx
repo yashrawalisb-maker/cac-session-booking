@@ -69,7 +69,7 @@ export function LiveDot() {
   );
 }
 
-/** Bus · Airport · Gate as three dots: filled = checked in, hollow = pending. */
+/** Mohali bus · Airport · Hyderabad bus as three dots: filled = checked in, hollow = pending. */
 export function PipelineDots({ stages, elsewhere }: { stages: StageMap; elsewhere?: (s: keyof StageMap) => boolean }) {
   return (
     <div className="flex items-center gap-1.5" aria-label="Check-in progress">
@@ -99,7 +99,7 @@ export function PipelineDots({ stages, elsewhere }: { stages: StageMap; elsewher
   );
 }
 
-/** BUS ✓ 07:12 · AIRPORT – · GATE – tiles, with the current checkpoint outlined. */
+/** Mohali bus ✓ 07:12 · Airport – · Hyderabad bus – tiles, with the current checkpoint outlined. */
 export function StageChips({ stages, highlight }: { stages: StageMap; highlight?: string }) {
   return (
     <div className="grid grid-cols-3 gap-2">
@@ -114,7 +114,7 @@ export function StageChips({ stages, highlight }: { stages: StageMap; highlight?
               highlight === stage && "outline-2 outline-offset-1 outline-primary",
             )}
           >
-            <div className="text-[11px] font-semibold tracking-wide">{stage}</div>
+            <div className="text-[11px] font-semibold tracking-wide">{STAGE_LABEL[stage]}</div>
             <div className="text-base font-semibold">{scan ? "✓" : "–"}</div>
             <div className="h-4 text-[11px]">{scan ? `${fmtTime(scan.scannedAt)}${scan.pending ? " ⏳" : ""}` : ""}</div>
           </div>

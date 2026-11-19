@@ -14,7 +14,7 @@ export async function buildTravelSnapshot(viewer: { id: string; name: string; is
         pgpId: true,
         isbEmail: true,
         cohortSplit: true,
-        travelAssignment: { select: { slotId: true, busNumber: true } },
+        travelAssignment: { select: { slotId: true } },
       },
       orderBy: { name: "asc" },
     }),
@@ -40,7 +40,6 @@ export async function buildTravelSnapshot(viewer: { id: string; name: string; is
       isbEmail: s.isbEmail,
       cohortSplit: s.cohortSplit,
       slotId: s.travelAssignment?.slotId ?? null,
-      busNumber: s.travelAssignment?.busNumber ?? null,
     })),
     scanners: [...admins, ...coordinators.map((c) => c.user)],
     scans,
@@ -57,10 +56,11 @@ export async function buildTravelSnapshot(viewer: { id: string; name: string; is
 
 export const TRAVEL_STAGES: TravelStage[] = ["BUS", "AIRPORT", "GATE"];
 
+// Stored on each new flight's checkpoints. GATE is the Hyderabad airport bus (see lib/travel-shared.ts).
 export const DEFAULT_CHECKPOINT_LABELS: Record<TravelStage, string> = {
-  BUS: "Bus boarding",
-  AIRPORT: "Airport check-in",
-  GATE: "Gate boarding",
+  BUS: "Mohali campus bus to Chandigarh airport",
+  AIRPORT: "Chandigarh airport",
+  GATE: "Hyderabad airport bus to campus",
 };
 
 export async function serializeScans(): Promise<TravelScanDTO[]> {
