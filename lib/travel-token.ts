@@ -1,40 +1,49 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import type { TravelStage } from "@/generated/prisma/client";
 
 /**
- * Check-in station tokens. A team member's phone shows a QR holding a short-lived signed token for
- * (checkpoint, team member, issued-at). Students scan it to check themselves in. Tokens are signed
- * with AUTH_SECRET (no DB state) and expire after STATION_TOKEN_TTL_MS; the station refreshes the
- * QR every STATION_REFRESH_MS, so a forwarded photo/screenshot stops working within ~a minute.
+ * Static check-in QR codes — exactly three, one per checkpoint (Mohali bus, Airport, Hyderabad bus),
+ * the same for every flight. A scan checks the student in at THEIR OWN flight's checkpoint.
+ *
+ * The token is the stage plus an HMAC signed with AUTH_SECRET, so a student can't fake the
+ * Hyderabad-bus check-in by editing a link. It never expires, so printed QRs keep working —
+ * but rotating AUTH_SECRET would invalidate them (reprint from Travel → QR codes).
  */
 
-const PREFIX = "GSBT1";
-export const STATION_TOKEN_TTL_MS = 90_000;
-export const STATION_REFRESH_MS = 20_000;
+const PREFIX = "GSBS1";
+const STAGES: readonly TravelStage[] = ["BUS", "AIRPORT", "GATE"];
 
-function sign(payload: string): string {
+function sign(stage: string): string {
   const secret = process.env.AUTH_SECRET;
   if (!secret) throw new Error("AUTH_SECRET is not set");
-  return createHmac("sha256", secret).update(`travel-station:${payload}`).digest("base64url").slice(0, 22);
+  return createHmac("sha256", secret).update(`travel-stage-qr:${stage}`).digest("base64url").slice(0, 16);
 }
 
-export function makeStationToken(checkpointId: string, memberId: string, now = Date.now()): string {
-  const payload = `${checkpointId}.${memberId}.${Math.floor(now / 1000).toString(36)}`;
-  return `${PREFIX}.${payload}.${sign(payload)}`;
+export function makeStageToken(stage: TravelStage): string {
+  return `${PREFIX}.${stage}.${sign(stage)}`;
 }
 
-export type StationTokenResult =
-  | { ok: true; checkpointId: string; memberId: string; issuedAt: number }
-  | { ok: false; reason: "invalid" | "expired" };
-
-export function readStationToken(token: string, now = Date.now()): StationTokenResult {
+/** The stage a scanned token stands for, or null if it isn't a genuine check-in QR. */
+export function readStageToken(token: string): TravelStage | null {
   const parts = token.trim().split(".");
-  if (parts.length !== 5 || parts[0] !== PREFIX) return { ok: false, reason: "invalid" };
-  const [, checkpointId, memberId, issued36, sig] = parts;
-  const expected = Buffer.from(sign(`${checkpointId}.${memberId}.${issued36}`));
-  const given = Buffer.from(sig);
-  if (given.length !== expected.length || !timingSafeEqual(given, expected)) return { ok: false, reason: "invalid" };
-  const issuedAt = parseInt(issued36, 36) * 1000;
-  if (!Number.isFinite(issuedAt) || issuedAt > now + 30_000) return { ok: false, reason: "invalid" };
-  if (now - issuedAt > STATION_TOKEN_TTL_MS) return { ok: false, reason: "expired" };
-  return { ok: true, checkpointId, memberId, issuedAt };
+  if (parts.length !== 3 || parts[0] !== PREFIX) return null;
+  const stage = parts[1] as TravelStage;
+  if (!STAGES.includes(stage)) return null;
+  const expected = Buffer.from(sign(stage));
+  const given = Buffer.from(parts[2]);
+  if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null;
+  return stage;
+}
+
+/** The URL each QR encodes: opens the check-in page (works from the in-app scanner or the phone camera). */
+export function stageCheckinUrls(origin: string): Record<TravelStage, string> {
+  const url = (stage: TravelStage) => `${origin}/travel/checkin?t=${encodeURIComponent(makeStageToken(stage))}`;
+  return { BUS: url("BUS"), AIRPORT: url("AIRPORT"), GATE: url("GATE") };
+}
+
+/** Origin of the current request (so QRs printed from the live site point at the live site). */
+export function requestOrigin(h: Headers): string {
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
 }

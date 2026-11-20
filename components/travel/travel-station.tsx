@@ -1,22 +1,36 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Keyboard, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { STAGES, STAGE_LABEL, TONE_CLASSES, fmtTime, toneFor } from "@/lib/travel-shared";
+import { STAGES, STAGE_LABEL, TONE_CLASSES, fmtTime, toneFor, type Stage } from "@/lib/travel-shared";
 import { useTravel } from "./travel-data";
 import { LiveDot, ProgressBar } from "./travel-ui";
 import { ManualCheckinDialog } from "./manual-checkin-dialog";
 
 /**
- * Team member's check-in station: shows a rotating QR for their checkpoint. Students scan it from
- * Travel → "Scan to check in" (or with the phone camera), which logs "<student> checked in with
- * <team member> at <stage>". Manual check-in stays available for dead phones / no internet.
+ * Team member's check-in station for one flight's checkpoint. Shows that checkpoint's static QR
+ * (the same printed QR for every flight — students' scans count for their own flight), a live list of
+ * who has checked in there, progress, who's still pending, and manual check-in for dead phones.
  */
-export function TravelStation() {
-  const { me, slots, checkpoints, students, scans, studentById, slotById, checkpointById, stagesFor, slotStats, setMyCheckpoint, refresh } =
-    useTravel();
+export function TravelStation({ qrUrls }: { qrUrls: Record<Stage, string> }) {
+  const {
+    me,
+    slots,
+    checkpoints,
+    students,
+    scans,
+    studentById,
+    slotById,
+    checkpointById,
+    stagesFor,
+    slotStats,
+    setMyCheckpoint,
+    refresh,
+    scannerName,
+  } = useTravel();
 
   const myCp = me?.checkpointId ? checkpointById.get(me.checkpointId) : undefined;
   const mySlot = myCp ? slotById.get(myCp.slotId) : undefined;
@@ -25,14 +39,11 @@ export function TravelStation() {
   const [showPending, setShowPending] = useState(false);
   const [cpError, setCpError] = useState<string | null>(null);
 
-  // Everyone who checked in with me at this checkpoint, newest first.
+  // Everyone checked in at this checkpoint (QR self check-ins + manual), newest first.
   // (React Compiler memoizes this.)
-  const mine =
-    myCp && me
-      ? scans.filter((s) => s.scannedById === me.userId && s.checkpointId === myCp.id).sort((a, b) => b.scannedAt.localeCompare(a.scannedAt))
-      : [];
+  const mine = myCp ? scans.filter((s) => s.checkpointId === myCp.id).sort((a, b) => b.scannedAt.localeCompare(a.scannedAt)) : [];
 
-  // Flash a banner when a new check-in with me arrives (not for what was already there on open).
+  // Flash a banner when a new check-in arrives here (not for what was already there on open).
   const latestKey = mine[0] ? `${mine[0].id}:${mine[0].scannedAt}` : "";
   const [seen, setSeen] = useState({ cp: myCp?.id, key: latestKey });
   const [flash, setFlash] = useState<string | null>(null);
@@ -104,23 +115,26 @@ export function TravelStation() {
         {slots.length === 0 ? (
           <p className="py-16 text-center text-sm text-muted-foreground">No flights have been set up yet. The admin adds them under Travel Log → Setup.</p>
         ) : !myCp || !mySlot ? (
-          <p className="py-16 text-center text-sm text-muted-foreground">Pick your checkpoint above to show your check-in QR.</p>
+          <p className="py-16 text-center text-sm text-muted-foreground">Pick your checkpoint above to see its QR and who has checked in.</p>
         ) : (
-          <StationQr key={myCp.id} checkpointId={myCp.id} caption={`${mySlot.label} · ${STAGE_LABEL[myCp.stage]}`} />
+          <StageQr url={qrUrls[myCp.stage]} caption={`${STAGE_LABEL[myCp.stage]} check-in`} />
         )}
         {flash && (
           <div className="absolute inset-x-4 top-4 rounded-xl bg-success px-4 py-3 text-center font-semibold text-white shadow-lg">{flash}</div>
         )}
       </section>
+      <Link href="/travel/qr" className="-mt-2 self-center text-sm font-medium text-primary underline-offset-4 hover:underline">
+        Print the three QR codes
+      </Link>
 
       {myCp && (
         <section className="rounded-xl bg-card p-4 ring-1 ring-border">
           <div className="flex items-baseline justify-between">
-            <h2 className="font-semibold">Checked in with me</h2>
+            <h2 className="font-semibold">{`Checked in here · ${mySlot?.label ?? ""}`}</h2>
             <span className="text-sm font-semibold">{mine.length}</span>
           </div>
           {mine.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">Nobody yet. Students scan your QR from Travel → Scan to check in.</p>
+            <p className="mt-2 text-sm text-muted-foreground">{`Nobody yet. Students scan the ${STAGE_LABEL[myCp.stage]} QR from Travel → Scan to check in.`}</p>
           ) : (
             <ul className="mt-2 max-h-72 divide-y divide-border overflow-y-auto">
               {mine.map((s) => {
@@ -131,7 +145,7 @@ export function TravelStation() {
                       <div className="truncate font-medium">{st?.name ?? "Unknown student"}</div>
                       <div className={cn("truncate text-xs", s.notes ? "text-warning" : "text-muted-foreground")}>
                         {st?.pgpId}
-                        {s.method === "manual" ? " · manual" : ""}
+                        {s.method === "manual" ? ` · manual${scannerName(s.scannedById) ? ` by ${scannerName(s.scannedById)}` : ""}` : ""}
                         {s.notes ? ` · ${s.notes}` : ""}
                       </div>
                     </div>
@@ -196,43 +210,15 @@ export function TravelStation() {
   );
 }
 
-type StationState = { qr: string; expiresAt: number } | null;
-
-/** The rotating QR: fetches a fresh signed token every ~20s and keeps the screen awake. */
-function StationQr({ checkpointId, caption }: { checkpointId: string; caption: string }) {
-  const [state, setState] = useState<StationState>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [expired, setExpired] = useState(false);
+/** The checkpoint's static QR (same as the printed one) — shown on screen if there's no printout. Keeps the screen awake. */
+function StageQr({ url, caption }: { url: string; caption: string }) {
+  const [qr, setQr] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let expiry: ReturnType<typeof setTimeout> | undefined;
-
-    async function load() {
-      let next = 20_000;
-      try {
-        const res = await fetch(`/api/travel/station?checkpointId=${encodeURIComponent(checkpointId)}`, { cache: "no-store" });
-        const body = (await res.json().catch(() => null)) as { token?: string; expiresAt?: string; refreshMs?: number; error?: string } | null;
-        if (!res.ok || !body?.token || !body.expiresAt) throw new Error(body?.error ?? `HTTP ${res.status}`);
-        const url = `${window.location.origin}/travel/checkin?t=${encodeURIComponent(body.token)}`;
-        const qr = await QRCode.toDataURL(url, { margin: 1, width: 560, errorCorrectionLevel: "M" });
-        if (cancelled) return;
-        const expiresAt = new Date(body.expiresAt).getTime();
-        setState({ qr, expiresAt });
-        setExpired(false);
-        setError(null);
-        clearTimeout(expiry);
-        expiry = setTimeout(() => !cancelled && setExpired(true), Math.max(0, expiresAt - Date.now()));
-        next = body.refreshMs ?? next;
-      } catch (e) {
-        if (cancelled) return;
-        setError((e as Error).message);
-        next = 5_000; // retry sooner while offline
-      }
-      timer = setTimeout(load, next);
-    }
-    void load();
+    QRCode.toDataURL(url, { margin: 1, width: 560, errorCorrectionLevel: "M" })
+      .then((d) => !cancelled && setQr(d))
+      .catch(() => undefined);
 
     // Keep the screen on while the station is open (re-acquired when the tab becomes visible again).
     let lock: { release: () => Promise<void> } | null = null;
@@ -249,31 +235,24 @@ function StationQr({ checkpointId, caption }: { checkpointId: string; caption: s
 
     return () => {
       cancelled = true;
-      clearTimeout(timer);
-      clearTimeout(expiry);
       document.removeEventListener("visibilitychange", wake);
       void lock?.release().catch(() => undefined);
     };
-  }, [checkpointId]);
+  }, [url]);
 
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative aspect-square w-full max-w-sm">
-        {state ? (
+        {qr ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={state.qr} alt={`Check-in QR for ${caption}`} className={cn("h-full w-full", expired && "opacity-15")} />
+          <img src={qr} alt={`Check-in QR for ${caption}`} className="h-full w-full" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">{error ? "Can't load the QR." : "Loading QR…"}</div>
-        )}
-        {expired && (
-          <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm font-semibold text-danger">
-            QR expired — no connection. Use Manual check-in until you&apos;re back online.
-          </div>
+          <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">Loading QR…</div>
         )}
       </div>
       <div className="text-center">
         <p className="text-lg font-bold text-gray-900">{caption}</p>
-        <p className="text-xs text-gray-500">Students scan this from Travel → Scan to check in. It refreshes automatically.</p>
+        <p className="text-xs text-gray-500">The same QR for every flight. Each student&apos;s check-in counts for their own flight.</p>
       </div>
     </div>
   );

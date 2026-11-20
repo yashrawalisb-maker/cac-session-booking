@@ -50,7 +50,7 @@ export async function buildTravelSnapshot(viewer: { id: string; name: string; is
  * Travel Log server helpers. Access model mirrors attendance tracking:
  *  - admins see and do everything;
  *  - TravelCoordinator rows make a non-admin a travel team member with a check-in station (not admin rights);
- *  - every student sees the Travel tab; once they're on a flight they scan a team member's station QR
+ *  - every student sees the Travel tab; once they're on a flight they scan the static checkpoint QR
  *    to check in (before that, the Travel page says they haven't been assigned yet).
  */
 
@@ -78,7 +78,8 @@ export async function serializeScans(): Promise<TravelScanDTO[]> {
 export async function upsertTravelScan(input: {
   userId: string;
   checkpointId: string;
-  scannedById: string;
+  /** Team member who checked them in; null for a self check-in via a static QR. */
+  scannedById: string | null;
   scannedAt: Date;
   method: "qr" | "manual";
   notes: string | null;

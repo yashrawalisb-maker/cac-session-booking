@@ -61,21 +61,22 @@ export type SlotStats = {
   pct: number;
 };
 
-/** Reply from POST /api/travel/checkin (a student scanning a team member's station QR). */
+/** Reply from POST /api/travel/checkin (a student scanning one of the three static checkpoint QRs). */
 export type CheckinResponse =
-  | { status: "ok"; stage: Stage; flight: string; memberName: string; scannedAt: string; already: boolean }
-  | { status: "confirm_other_flight"; stage: Stage; thisFlight: string; yourFlight: string | null; memberName: string }
-  | { status: "expired" }
+  | { status: "ok"; stage: Stage; flight: string; scannedAt: string; already: boolean }
+  | { status: "no_flight"; stage: Stage }
   | { status: "invalid" }
   | { status: "error"; message: string };
 
-/** Pull a station token out of scanned text: either the raw token or a …/travel/checkin?t=… link. */
-export function extractStationToken(text: string): string | null {
+const QR_PREFIX = "GSBS1.";
+
+/** Pull a check-in token out of scanned text: either the raw token or a …/travel/checkin?t=… link. */
+export function extractCheckinToken(text: string): string | null {
   const raw = text.trim();
-  if (raw.startsWith("GSBT1.")) return raw;
+  if (raw.startsWith(QR_PREFIX)) return raw;
   try {
     const t = new URL(raw).searchParams.get("t");
-    return t?.startsWith("GSBT1.") ? t : null;
+    return t?.startsWith(QR_PREFIX) ? t : null;
   } catch {
     return null;
   }

@@ -50,7 +50,7 @@ export default async function TravelPage() {
               </span>
               <div className="flex-1">
                 <p className="font-medium">You&apos;re on the travel team</p>
-                <p className="text-sm text-muted-foreground">Show your check-in QR at your checkpoint.</p>
+                <p className="text-sm text-muted-foreground">See who has checked in at your checkpoint, print the QRs, or check someone in manually.</p>
               </div>
               <Button nativeButton={false} render={<Link href="/travel/station" />}>Open station</Button>
             </CardContent>
@@ -79,7 +79,7 @@ export default async function TravelPage() {
               <p className="text-xs text-muted-foreground">Mohali campus → Chandigarh airport → Hyderabad airport → campus</p>
               <StudentScanButton />
               <p className="text-center text-xs text-muted-foreground">
-                {"Scan the QR on a CAC team member's phone when you board the Mohali bus, at the airport, and when you board the Hyderabad bus."}
+                {"Scan the CAC check-in QR when you board the Mohali bus, at the airport, and when you board the Hyderabad bus."}
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {TRAVEL_STAGES.map((stage) => {

@@ -1,4 +1,6 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { requestOrigin, stageCheckinUrls } from "@/lib/travel-token";
 import { requireUser } from "@/lib/authz";
 import { hasAttendanceAccess } from "@/lib/attendance";
 import { hasUnreadAnnouncements } from "@/lib/announcements";
@@ -14,6 +16,7 @@ export default async function TravelStationPage() {
   const [unreadUpdates, showAttendanceTab] = user.isAdmin
     ? [false, false]
     : await Promise.all([hasUnreadAnnouncements(user.id!), hasAttendanceAccess(user.id!)]);
+  const qrUrls = stageCheckinUrls(requestOrigin(await headers()));
 
   return (
     <AppShell
@@ -25,7 +28,7 @@ export default async function TravelStationPage() {
     >
       <TravelDataProvider userId={user.id!}>
         <TravelGate>
-          <TravelStation />
+          <TravelStation qrUrls={qrUrls} />
         </TravelGate>
       </TravelDataProvider>
     </AppShell>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { ArrowRight, Download, Plane, QrCode, Settings2, UserX } from "lucide-react";
+import { ArrowRight, Download, Plane, QrCode, ScanLine, Settings2, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -37,9 +37,13 @@ export function TravelDashboard() {
             <Settings2 className="size-4" />
             Setup
           </Button>
-          <Button nativeButton={false} render={<Link href="/travel/station" />}>
+          <Button variant="outline" nativeButton={false} render={<Link href="/travel/station" />}>
+            <ScanLine className="size-4" />
+            Check-in station
+          </Button>
+          <Button nativeButton={false} render={<Link href="/travel/qr" />}>
             <QrCode className="size-4" />
-            Open check-in station
+            QR codes
           </Button>
         </div>
       </div>
