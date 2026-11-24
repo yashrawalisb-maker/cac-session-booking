@@ -78,8 +78,11 @@ export function QrScanner({ onScan }: { onScan: (text: string) => void }) {
   }, [elementId]);
 
   return (
-    <div className="relative h-full w-full bg-black">
-      <div id={elementId} className="qr-reader h-full w-full [&_video]:h-full! [&_video]:w-full! [&_video]:object-cover" />
+    // The video keeps its natural shape (full width, auto height, centred). Don't stretch/crop it with
+    // object-cover: html5-qrcode maps its scan square from the video element's size, and a stretched
+    // video makes it read a squashed region, so QRs fail on cameras whose shape differs from the screen.
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-black">
+      <div id={elementId} className="qr-reader w-full [&_video]:block! [&_video]:h-auto! [&_video]:w-full!" />
       {starting && !error && (
         <div className="absolute inset-0 flex items-center justify-center text-sm text-white/70">Starting camera…</div>
       )}
