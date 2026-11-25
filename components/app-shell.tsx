@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Ticket, Users, LogOut, Menu, X, Bell, Megaphone, ClipboardCheck, CalendarDays, Plane } from "lucide-react";
+import { LayoutDashboard, Ticket, Users, LogOut, Menu, X, Bell, Megaphone, ClipboardCheck, CalendarDays, Plane, QrCode, ScanLine } from "lucide-react";
 import { IsbLogo } from "@/components/isb-logo";
 import { logout } from "@/app/logout-action";
 import { cn } from "@/lib/utils";
@@ -89,6 +89,34 @@ const ADMIN_NAV: NavItem[] = [
   },
 ];
 
+// CAC staff accounts (not students): travel tracking only.
+const STAFF_NAV: NavItem[] = [
+  {
+    label: "Travel overview",
+    href: "/travel/overview",
+    icon: Plane,
+    isActive: (p) => p.startsWith("/travel/overview"),
+  },
+  {
+    label: "Check-in station",
+    href: "/travel/station",
+    icon: ScanLine,
+    isActive: (p) => p.startsWith("/travel/station"),
+  },
+  {
+    label: "QR codes",
+    href: "/travel/qr",
+    icon: QrCode,
+    isActive: (p) => p.startsWith("/travel/qr"),
+  },
+];
+
+const HOME: Record<"student" | "admin" | "staff", string> = {
+  student: "/dashboard",
+  admin: "/admin",
+  staff: "/travel/overview",
+};
+
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "U";
@@ -104,7 +132,7 @@ export function AppShell({
   showAttendanceTab = false,
   children,
 }: {
-  variant: "student" | "admin";
+  variant: "student" | "admin" | "staff";
   userName: string;
   userSubtitle?: string;
   /** Shows a dot on the bell; student pages compute this via hasUnreadAnnouncements(). */
@@ -118,17 +146,19 @@ export function AppShell({
   const nav =
     variant === "admin"
       ? ADMIN_NAV
-      : [
-          ...STUDENT_NAV_BASE,
-          ...(showAttendanceTab ? [ATTENDANCE_NAV_ITEM] : []),
-          // Always visible: before a flight is assigned, the Travel page says so.
-          TRAVEL_NAV_ITEM,
-        ];
+      : variant === "staff"
+        ? STAFF_NAV
+        : [
+            ...STUDENT_NAV_BASE,
+            ...(showAttendanceTab ? [ATTENDANCE_NAV_ITEM] : []),
+            // Always visible: before a flight is assigned, the Travel page says so.
+            TRAVEL_NAV_ITEM,
+          ];
 
   const sidebar = (
     <div className="flex h-full flex-col gap-2 p-4">
       <div className="flex items-center justify-between px-2 pb-4 pt-1">
-        <Link href={variant === "admin" ? "/admin" : "/dashboard"} className="flex items-center">
+        <Link href={HOME[variant]} className="flex items-center">
           <IsbLogo variant="navy" height={26} />
         </Link>
         <button
@@ -213,16 +243,18 @@ export function AppShell({
           </div>
 
           <div className="ml-auto flex items-center gap-3 sm:gap-4">
-            <Link
-              href={variant === "admin" ? "/admin/announcements" : "/updates"}
-              className="relative flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label={unreadUpdates ? "Updates (new announcements)" : "Updates"}
-            >
-              <Bell className="size-5" />
-              {unreadUpdates && (
-                <span className="absolute right-1.5 top-1.5 size-2.5 rounded-full border-2 border-card bg-danger" />
-              )}
-            </Link>
+            {variant !== "staff" && (
+              <Link
+                href={variant === "admin" ? "/admin/announcements" : "/updates"}
+                className="relative flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label={unreadUpdates ? "Updates (new announcements)" : "Updates"}
+              >
+                <Bell className="size-5" />
+                {unreadUpdates && (
+                  <span className="absolute right-1.5 top-1.5 size-2.5 rounded-full border-2 border-card bg-danger" />
+                )}
+              </Link>
+            )}
             <div className="flex items-center gap-2.5">
               <span className="flex size-9 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                 {initials(userName)}

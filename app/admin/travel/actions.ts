@@ -83,7 +83,7 @@ export async function assignCohortSplit(_prev: ActionState, formData: FormData):
     return { error: "That flight no longer exists." };
   }
 
-  const users = await prisma.user.findMany({ where: { cohortSplit: split, isAdmin: false }, select: { id: true } });
+  const users = await prisma.user.findMany({ where: { cohortSplit: split, isAdmin: false, isStaff: false }, select: { id: true } });
   if (users.length === 0) return { error: `No students in ${split}. Is the roster's cohort_split filled in?` };
   const ids = users.map((u) => u.id);
 
@@ -108,7 +108,7 @@ export async function importTravelAssignmentsCsv(_prev: ActionState, formData: F
 
   const [slots, users] = await Promise.all([
     prisma.travelSlot.findMany({ select: { id: true, label: true, flightNo: true } }),
-    prisma.user.findMany({ select: { id: true, pgpId: true } }),
+    prisma.user.findMany({ where: { isStaff: false }, select: { id: true, pgpId: true } }),
   ]);
   const slotByKey = new Map<string, string>();
   for (const s of slots) {

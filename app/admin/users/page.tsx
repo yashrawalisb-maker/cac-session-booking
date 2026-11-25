@@ -42,7 +42,7 @@ export default async function AdminUsersPage() {
                 <TableCell>{u.studyGroup ?? "—"}</TableCell>
                 <TableCell>{u.cohortSplit ?? "—"}</TableCell>
                 <TableCell>
-                  {u.isAdmin ? <Badge>Admin</Badge> : <Badge variant="outline">User</Badge>}
+                  {u.isAdmin ? <Badge>Admin</Badge> : u.isStaff ? <Badge variant="secondary">Staff</Badge> : <Badge variant="outline">User</Badge>}
                 </TableCell>
               </TableRow>
             ))}

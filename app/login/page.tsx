@@ -2,6 +2,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth, microsoftSignInEnabled, testPgidLoginEnabled } from "@/auth";
 import { IsbLogo } from "@/components/isb-logo";
+import { homePathFor } from "@/lib/authz";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage({
@@ -10,7 +11,7 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const session = await auth();
-  if (session?.user) redirect(session.user.isAdmin ? "/admin" : "/dashboard");
+  if (session?.user) redirect(homePathFor(session.user));
 
   const { error } = await searchParams;
 
@@ -47,14 +48,14 @@ export default async function LoginPage({
       <div className="flex flex-1 items-center justify-center bg-card px-4 py-12 sm:px-6">
         <div className="w-full max-w-sm">
           <h2 className="text-xl font-semibold tracking-tight">Sign in to your account</h2>
-          <p className="mt-1 mb-6 text-sm text-muted-foreground">
-            {testPgidLoginEnabled
-              ? "Enter your PGP ID to continue."
-              : microsoftSignInEnabled
-                ? "Sign in with your institutional @isb.edu account."
-                : "Use your ISB email and PGP ID to continue."}
-          </p>
           <LoginForm
+            subtitle={
+              testPgidLoginEnabled
+                ? "Enter your PGP ID to continue."
+                : microsoftSignInEnabled
+                  ? "Sign in with your institutional @isb.edu account."
+                  : "Use your ISB email and PGP ID to continue."
+            }
             urlError={error}
             microsoftSignInEnabled={microsoftSignInEnabled}
             testPgidLogin={testPgidLoginEnabled}

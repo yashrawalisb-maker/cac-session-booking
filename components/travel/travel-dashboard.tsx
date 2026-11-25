@@ -10,8 +10,14 @@ import { STAGES, STAGE_LABEL, TONE_CLASSES, fmtDeparture, fmtTime, toneFor } fro
 import { useTravel } from "./travel-data";
 import { LiveDot, ProgressBar } from "./travel-ui";
 
-export function TravelDashboard() {
+/**
+ * All-flights live view. "admin" (/admin/travel) also has Setup, exports and the not-on-a-flight list;
+ * "team" (/travel/overview, CAC staff + travel team) is the same tracking view without those.
+ */
+export function TravelDashboard({ mode = "admin" }: { mode?: "admin" | "team" }) {
   const { slots, students, scans, slotStats, studentById, checkpointById, slotById, scannerName } = useTravel();
+  const admin = mode === "admin";
+  const flightHref = (id: string) => (admin ? `/admin/travel/flight/${id}` : `/travel/overview/flight/${id}`);
   const unassigned = slotStats(null);
   const assignedCount = students.length - unassigned.total;
 
@@ -33,10 +39,12 @@ export function TravelDashboard() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" nativeButton={false} render={<Link href="/admin/travel/setup" />}>
-            <Settings2 className="size-4" />
-            Setup
-          </Button>
+          {admin && (
+            <Button variant="outline" nativeButton={false} render={<Link href="/admin/travel/setup" />}>
+              <Settings2 className="size-4" />
+              Setup
+            </Button>
+          )}
           <Button variant="outline" nativeButton={false} render={<Link href="/travel/station" />}>
             <ScanLine className="size-4" />
             Check-in station
@@ -55,16 +63,22 @@ export function TravelDashboard() {
             <div>
               <p className="font-medium">No flights added yet</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Add flights and allocate students in Setup whenever the travel plan is final. Everything else works from there.
+                {admin
+                  ? "Add flights and allocate students in Setup whenever the travel plan is final. Everything else works from there."
+                  : "The CAC admin hasn't added the flights yet. They'll show up here automatically."}
               </p>
             </div>
-            <Button nativeButton={false} render={<Link href="/admin/travel/setup" />}>Go to Setup</Button>
+            {admin && <Button nativeButton={false} render={<Link href="/admin/travel/setup" />}>Go to Setup</Button>}
           </CardContent>
         </Card>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Total label="On a flight" value={`${assignedCount}/${students.length}`} />
+            {admin ? (
+              <Total label="On a flight" value={`${assignedCount}/${students.length}`} />
+            ) : (
+              <Total label="Students flying" value={assignedCount} />
+            )}
             {STAGES.map((stage) => (
               <Total key={stage} label={`${STAGE_LABEL[stage]} check-ins`} value={totals[stage]} />
             ))}
@@ -75,7 +89,7 @@ export function TravelDashboard() {
               const s = slotStats(slot.id);
               const tone = TONE_CLASSES[toneFor(s.pct)];
               return (
-                <Link key={slot.id} href={`/admin/travel/flight/${slot.id}`} className="group">
+                <Link key={slot.id} href={flightHref(slot.id)} className="group">
                   <Card className={cn("h-full transition-shadow group-hover:shadow-md", s.total > 0 && `ring-2 ${tone.ring}`)}>
                     <CardContent className="flex flex-col gap-3">
                       <div className="flex items-start justify-between gap-2">
@@ -114,7 +128,7 @@ export function TravelDashboard() {
             })}
           </div>
 
-          {unassigned.total > 0 && (
+          {admin && unassigned.total > 0 && (
             <Link href="/admin/travel/flight/unassigned" className="group">
               <Card className="transition-shadow group-hover:shadow-md">
                 <CardContent className="flex items-center gap-3">
@@ -131,17 +145,19 @@ export function TravelDashboard() {
             </Link>
           )}
 
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" nativeButton={false} render={<a href="/admin/travel/export" />}>
-              <Download className="size-4" />
-              Export all (CSV)
-            </Button>
-            {slots.map((slot) => (
-              <Button key={slot.id} variant="ghost" nativeButton={false} render={<a href={`/admin/travel/export?flight=${slot.id}`} />}>
-                {slot.label} CSV
+          {admin && (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" nativeButton={false} render={<a href="/admin/travel/export" />}>
+                <Download className="size-4" />
+                Export all (CSV)
               </Button>
-            ))}
-          </div>
+              {slots.map((slot) => (
+                <Button key={slot.id} variant="ghost" nativeButton={false} render={<a href={`/admin/travel/export?flight=${slot.id}`} />}>
+                  {slot.label} CSV
+                </Button>
+              ))}
+            </div>
+          )}
 
           <Card>
             <CardContent>

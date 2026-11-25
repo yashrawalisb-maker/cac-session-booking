@@ -14,8 +14,12 @@ import { ManualCheckinDialog } from "./manual-checkin-dialog";
 type StatusFilter = "ALL" | "PENDING" | "DONE";
 
 /** One flight's student list (or the "not assigned" bucket): pending first, filters, manual check-in. */
-export function FlightRoster({ slotId }: { slotId: string | null }) {
+export function FlightRoster({ slotId, mode = "admin" }: { slotId: string | null; mode?: "admin" | "team" }) {
   const { slots, students, slotById, checkpointById, slotStats, stagesFor } = useTravel();
+  // "team" = CAC staff + travel team (/travel/overview): no exports, no not-on-a-flight list.
+  const admin = mode === "admin";
+  const backHref = admin ? "/admin/travel" : "/travel/overview";
+  const flightHref = (id: string) => (admin ? `/admin/travel/flight/${id}` : `/travel/overview/flight/${id}`);
   const slot = slotId ? slotById.get(slotId) : undefined;
   const stats = slotStats(slot ? slot.id : null);
   const [stage, setStage] = useState<Stage | null>(null); // null → follow the flight's active stage
@@ -41,8 +45,8 @@ export function FlightRoster({ slotId }: { slotId: string | null }) {
     return (
       <p className="py-10 text-center text-sm text-muted-foreground">
         That flight doesn&apos;t exist any more.{" "}
-        <Link href="/admin/travel" className="underline">
-          Back to Travel Log
+        <Link href={backHref} className="underline">
+          {admin ? "Back to Travel Log" : "Back to all flights"}
         </Link>
       </p>
     );
@@ -55,8 +59,8 @@ export function FlightRoster({ slotId }: { slotId: string | null }) {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <Link href="/admin/travel" className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="size-4" /> Back to Travel Log
+        <Link href={backHref} className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="size-4" /> {admin ? "Back to Travel Log" : "Back to all flights"}
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{slot ? slot.label : "Not on a flight yet"}</h1>
         <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -68,7 +72,7 @@ export function FlightRoster({ slotId }: { slotId: string | null }) {
         {slots.map((s) => (
           <Link
             key={s.id}
-            href={`/admin/travel/flight/${s.id}`}
+            href={flightHref(s.id)}
             className={cn(
               "shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ring-1",
               s.id === slot?.id ? "bg-primary text-primary-foreground ring-primary" : "bg-card text-muted-foreground ring-border hover:text-foreground",
@@ -77,15 +81,17 @@ export function FlightRoster({ slotId }: { slotId: string | null }) {
             {s.label}
           </Link>
         ))}
-        <Link
-          href="/admin/travel/flight/unassigned"
-          className={cn(
-            "shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ring-1",
-            !slot ? "bg-primary text-primary-foreground ring-primary" : "bg-card text-muted-foreground ring-border hover:text-foreground",
-          )}
-        >
-          Not assigned
-        </Link>
+        {admin && (
+          <Link
+            href="/admin/travel/flight/unassigned"
+            className={cn(
+              "shrink-0 rounded-full px-3 py-1.5 text-sm font-medium ring-1",
+              !slot ? "bg-primary text-primary-foreground ring-primary" : "bg-card text-muted-foreground ring-border hover:text-foreground",
+            )}
+          >
+            Not assigned
+          </Link>
+        )}
       </nav>
 
       {slot && (
@@ -98,11 +104,13 @@ export function FlightRoster({ slotId }: { slotId: string | null }) {
               </span>
             </div>
             <ProgressBar pct={pct} className={tone.bar} />
-            <div className="flex justify-end">
-              <Button size="sm" variant="outline" nativeButton={false} render={<a href={`/admin/travel/export?flight=${slot.id}`} />}>
-                <Download className="size-3.5" /> Export CSV
-              </Button>
-            </div>
+            {admin && (
+              <div className="flex justify-end">
+                <Button size="sm" variant="outline" nativeButton={false} render={<a href={`/admin/travel/export?flight=${slot.id}`} />}>
+                  <Download className="size-3.5" /> Export CSV
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -165,7 +173,9 @@ export function FlightRoster({ slotId }: { slotId: string | null }) {
         )}
       </Card>
       <p className="pb-4 text-center text-xs text-muted-foreground">
-        {"Dots: Mohali bus · Airport · Hyderabad bus. Amber = checked in on a different flight's checkpoint. Tap a student to check in, change their flight or clear a check-in."}
+        {`Dots: Mohali bus · Airport · Hyderabad bus. Amber = checked in on a different flight's checkpoint. ${
+          admin ? "Tap a student to check in, change their flight or clear a check-in." : "Tap a student to check them in by hand."
+        }`}
       </p>
 
       {open && <ManualCheckinDialog onClose={() => setOpen(null)} studentId={open} defaultStage={activeStage} />}

@@ -27,7 +27,7 @@ export default async function AdminEventDetailPage({
       include: { user: true, session: true, sessionTrack: true },
       orderBy: { bookedAt: "desc" },
     }),
-    prisma.user.findMany({ where: { isAdmin: false }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { isAdmin: false, isStaff: false }, orderBy: { name: "asc" } }),
     prisma.sessionAttendanceGrant.findMany({
       where: { session: { eventId } },
       include: { user: true },

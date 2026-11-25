@@ -19,7 +19,7 @@ export default async function AdminDashboardPage() {
     prisma.event.findMany({ orderBy: { startDate: "desc" } }),
     prisma.session.count(),
     prisma.booking.count({ where: { status: "confirmed" } }),
-    prisma.user.count({ where: { isAdmin: false } }),
+    prisma.user.count({ where: { isAdmin: false, isStaff: false } }),
   ]);
 
   const fillStats = await Promise.all(

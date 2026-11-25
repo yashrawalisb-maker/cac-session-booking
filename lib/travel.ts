@@ -7,7 +7,7 @@ export async function buildTravelSnapshot(viewer: { id: string; name: string; is
     prisma.travelSlot.findMany({ orderBy: [{ departureAt: "asc" }, { createdAt: "asc" }] }),
     prisma.travelCheckpoint.findMany(),
     prisma.user.findMany({
-      where: { OR: [{ isAdmin: false }, { travelAssignment: { isNot: null } }] },
+      where: { isStaff: false, OR: [{ isAdmin: false }, { travelAssignment: { isNot: null } }] },
       select: {
         id: true,
         name: true,

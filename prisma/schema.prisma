@@ -45,6 +45,10 @@ model User {
   cohortSplit String? @map("cohort_split") // e.g. "G1"/"G2" — mandatory-attendance half-section split, drives group booking override
   createdAt  DateTime @default(now()) @map("created_at")
   announcementsSeenAt DateTime? @map("announcements_seen_at") // drives the unread bell dot
+  // CAC staff (not students): sign in with staff ID (pgpId, e.g. "STAFF01") + password instead of
+  // Microsoft; get the Travel overview + check-in station. Excluded from every "all students" list.
+  isStaff      Boolean @default(false) @map("is_staff")
+  passwordHash String? @map("password_hash") // scrypt; staff only (see lib/password.ts)
 
   createdEvents     Event[]                @relation("EventCreatedBy")
   ticketAllotments  EventTicketAllotment[]

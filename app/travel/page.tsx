@@ -51,6 +51,12 @@ export default async function TravelPage() {
               <div className="flex-1">
                 <p className="font-medium">You&apos;re on the travel team</p>
                 <p className="text-sm text-muted-foreground">See who has checked in at your checkpoint, print the QRs, or check someone in manually.</p>
+                <Link
+                  href={user.isAdmin ? "/admin/travel" : "/travel/overview"}
+                  className="mt-1 inline-block text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  All flights overview
+                </Link>
               </div>
               <Button nativeButton={false} render={<Link href="/travel/station" />}>Open station</Button>
             </CardContent>

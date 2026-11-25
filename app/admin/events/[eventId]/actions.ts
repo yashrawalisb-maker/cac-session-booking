@@ -424,7 +424,7 @@ export async function setDefaultTickets(
   const tickets = Number(formData.get("tickets") ?? 0);
   if (!Number.isFinite(tickets) || tickets < 0) return { error: "Enter a valid ticket count." };
 
-  const users = await prisma.user.findMany({ where: { isAdmin: false }, select: { id: true } });
+  const users = await prisma.user.findMany({ where: { isAdmin: false, isStaff: false }, select: { id: true } });
   const existing = await prisma.eventTicketAllotment.findMany({
     where: { eventId },
     select: { userId: true },
@@ -533,7 +533,7 @@ export async function importAllotmentsCsv(
   const valid = results.filter((r): r is { row: number; data: { pgpId: string; tickets: number } } => !!r.data);
 
   const users = await prisma.user.findMany({
-    where: { pgpId: { in: valid.map((v) => v.data.pgpId) } },
+    where: { pgpId: { in: valid.map((v) => v.data.pgpId) }, isStaff: false },
   });
   const userByPgp = new Map(users.map((u) => [u.pgpId.toLowerCase(), u]));
 
@@ -630,7 +630,7 @@ export async function manualGroupBookingOverride(
   }
 
   const students = await prisma.user.findMany({
-    where: { isAdmin: false, cohortSplit: { in: cohortSplits } },
+    where: { isAdmin: false, isStaff: false, cohortSplit: { in: cohortSplits } },
     orderBy: { name: "asc" },
   });
 

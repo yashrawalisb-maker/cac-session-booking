@@ -18,6 +18,7 @@ export const authConfig: NextAuthConfig = {
       if (user) {
         token.userId = user.id;
         token.isAdmin = Boolean((user as { isAdmin?: boolean }).isAdmin);
+        token.isStaff = Boolean((user as { isStaff?: boolean }).isStaff);
       }
       return token;
     },
@@ -25,6 +26,7 @@ export const authConfig: NextAuthConfig = {
       if (session.user) {
         session.user.id = token.userId as string;
         session.user.isAdmin = Boolean(token.isAdmin);
+        session.user.isStaff = Boolean(token.isStaff);
       }
       return session;
     },

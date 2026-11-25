@@ -2,35 +2,24 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { requestOrigin, stageCheckinUrls } from "@/lib/travel-token";
 import { requireUser } from "@/lib/authz";
-import { hasAttendanceAccess } from "@/lib/attendance";
-import { hasUnreadAnnouncements } from "@/lib/announcements";
 import { canUseTravelScanner } from "@/lib/travel";
-import { AppShell } from "@/components/app-shell";
 import { TravelDataProvider } from "@/components/travel/travel-data";
 import { TravelGate } from "@/components/travel/travel-ui";
 import { TravelStation } from "@/components/travel/travel-station";
+import { TravelTeamShell } from "@/components/travel/travel-team-shell";
 
 export default async function TravelStationPage() {
-  const user = await requireUser();
-  if (!(await canUseTravelScanner(user))) redirect("/travel");
-  const [unreadUpdates, showAttendanceTab] = user.isAdmin
-    ? [false, false]
-    : await Promise.all([hasUnreadAnnouncements(user.id!), hasAttendanceAccess(user.id!)]);
+  const user = await requireUser({ allowStaff: true });
+  if (!(await canUseTravelScanner(user))) redirect(user.isStaff ? "/travel/overview" : "/travel");
   const qrUrls = stageCheckinUrls(requestOrigin(await headers()));
 
   return (
-    <AppShell
-      variant={user.isAdmin ? "admin" : "student"}
-      userName={user.name ?? user.email ?? ""}
-      userSubtitle={user.isAdmin ? "CAC Admin" : "Travel team"}
-      unreadUpdates={unreadUpdates}
-      showAttendanceTab={showAttendanceTab}
-    >
+    <TravelTeamShell user={user}>
       <TravelDataProvider userId={user.id!}>
         <TravelGate>
           <TravelStation qrUrls={qrUrls} />
         </TravelGate>
       </TravelDataProvider>
-    </AppShell>
+    </TravelTeamShell>
   );
 }

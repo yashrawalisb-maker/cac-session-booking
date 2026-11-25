@@ -26,7 +26,7 @@ export default async function TravelSetupPage() {
     }),
     prisma.travelCheckpoint.findMany({ include: { slot: true } }),
     prisma.user.findMany({
-      where: { isAdmin: false },
+      where: { isAdmin: false, isStaff: false },
       select: { cohortSplit: true, travelAssignment: { select: { slotId: true } } },
     }),
     prisma.travelCoordinator.findMany({

@@ -5,6 +5,7 @@ import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { authConfig } from "./auth.config";
 import { prisma } from "@/lib/prisma";
 import { isRateLimited, recordLoginAttempt } from "@/lib/rateLimit";
+import { verifyPassword } from "@/lib/password";
 
 // Test-only sign-in by PGP ID alone (no Microsoft), for staging previews on a test database.
 // Turned on with TEST_PGID_LOGIN=true (set only on a preview branch in Vercel); it is ALWAYS off
@@ -43,6 +44,7 @@ const providers: Provider[] = [
         where: {
           isbEmail: { equals: isbEmail, mode: "insensitive" },
           pgpId: { equals: pgpId, mode: "insensitive" },
+          isStaff: false, // staff accounts sign in with their password only
         },
       });
 
@@ -56,6 +58,34 @@ const providers: Provider[] = [
         email: user.isbEmail,
         isAdmin: user.isAdmin,
       };
+    },
+  }),
+  // CAC staff (not students): staff ID + password, set up by the create-staff script. Always on,
+  // independent of Microsoft. Only matches accounts flagged is_staff, so it can't be used to get
+  // into a student or admin account.
+  Credentials({
+    id: "staff",
+    name: "CAC staff ID",
+    credentials: {
+      staffId: { label: "Staff ID", type: "text" },
+      password: { label: "Password", type: "password" },
+    },
+    async authorize(credentials) {
+      const staffId = String(credentials?.staffId ?? "").trim();
+      const password = String(credentials?.password ?? "");
+      if (!staffId || !password || staffId.length > 40 || password.length > 200) return null;
+
+      const key = `staff:${staffId}`;
+      if (await isRateLimited(key)) return null;
+
+      const user = await prisma.user.findFirst({
+        where: { pgpId: { equals: staffId, mode: "insensitive" }, isStaff: true },
+      });
+      const ok = !!user && (await verifyPassword(password, user.passwordHash));
+      await recordLoginAttempt(key, ok, user?.id);
+      if (!user || !ok) return null;
+
+      return { id: user.id, name: user.name, email: user.isbEmail, isAdmin: user.isAdmin, isStaff: true };
     },
   }),
 ];
@@ -74,7 +104,7 @@ if (testPgidLoginEnabled) {
         if (await isRateLimited(key)) return null;
 
         const user = await prisma.user.findFirst({
-          where: { pgpId: { equals: pgpId, mode: "insensitive" } },
+          where: { pgpId: { equals: pgpId, mode: "insensitive" }, isStaff: false },
         });
         await recordLoginAttempt(key, !!user, user?.id);
         if (!user) return null;
@@ -112,7 +142,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { isbEmail: { equals: String(email), mode: "insensitive" } },
         });
 
-        if (!roster) return "/login?error=NotRegistered";
+        if (!roster || roster.isStaff) return "/login?error=NotRegistered";
 
         user.id = roster.id;
         user.isAdmin = roster.isAdmin;
@@ -135,12 +165,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const roster = email
           ? await prisma.user.findFirst({
               where: { isbEmail: { equals: String(email), mode: "insensitive" } },
-              select: { id: true, isAdmin: true },
+              select: { id: true, isAdmin: true, isStaff: true },
             })
           : null;
 
         token.userId = roster?.id ?? (user.id as string | undefined);
         token.isAdmin = roster?.isAdmin ?? Boolean((user as { isAdmin?: boolean }).isAdmin);
+        token.isStaff = roster?.isStaff ?? Boolean((user as { isStaff?: boolean }).isStaff);
       }
       return token;
     },

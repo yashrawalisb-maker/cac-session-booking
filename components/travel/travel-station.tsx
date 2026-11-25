@@ -123,9 +123,14 @@ export function TravelStation({ qrUrls }: { qrUrls: Record<Stage, string> }) {
           <div className="absolute inset-x-4 top-4 rounded-xl bg-success px-4 py-3 text-center font-semibold text-white shadow-lg">{flash}</div>
         )}
       </section>
-      <Link href="/travel/qr" className="-mt-2 self-center text-sm font-medium text-primary underline-offset-4 hover:underline">
-        Print the three QR codes
-      </Link>
+      <div className="-mt-2 flex flex-wrap justify-center gap-x-5 gap-y-1 text-sm font-medium text-primary">
+        <Link href={me?.isAdmin ? "/admin/travel" : "/travel/overview"} className="underline-offset-4 hover:underline">
+          All flights overview
+        </Link>
+        <Link href="/travel/qr" className="underline-offset-4 hover:underline">
+          Print the three QR codes
+        </Link>
+      </div>
 
       {myCp && (
         <section className="rounded-xl bg-card p-4 ring-1 ring-border">

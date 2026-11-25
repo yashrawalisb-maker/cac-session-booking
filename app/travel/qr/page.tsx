@@ -21,8 +21,8 @@ const WHERE: Record<Stage, string> = {
  * the QRs point at it.
  */
 export default async function TravelQrPage() {
-  const user = await requireUser();
-  if (!(await canUseTravelScanner(user))) redirect("/travel");
+  const user = await requireUser({ allowStaff: true });
+  if (!(await canUseTravelScanner(user))) redirect(user.isStaff ? "/travel/overview" : "/travel");
 
   const urls = stageCheckinUrls(requestOrigin(await headers()));
   const cards = await Promise.all(

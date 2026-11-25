@@ -49,6 +49,25 @@ export async function loginWithPgid(
   }
 }
 
+/** CAC staff: staff ID + password (accounts made by the create-staff script). */
+export async function loginWithStaff(
+  _prevState: LoginFormState,
+  formData: FormData
+): Promise<LoginFormState> {
+  const staffId = String(formData.get("staffId") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  if (!staffId || !password) return { error: "Please enter your staff ID and password." };
+
+  try {
+    await signIn("staff", { staffId, password, redirectTo: "/" });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return { error: "Staff ID or password is wrong. Too many tries locks it for 10 minutes." };
+    }
+    throw error; // rethrow the internal redirect signal on success
+  }
+}
+
 export async function loginWithMicrosoft() {
   await signIn("microsoft-entra-id", { redirectTo: "/" });
 }
